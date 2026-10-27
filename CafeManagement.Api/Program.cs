@@ -35,6 +35,7 @@ builder.Services.AddScoped<StaffAccess>();
 builder.Services.AddScoped<MenuService>();
 builder.Services.AddScoped<TableService>();
 builder.Services.AddScoped<TableQrService>();
+builder.Services.AddScoped<PublicMenuService>();
 builder.Services.AddOptions<PublicMenuOptions>()
     .Bind(builder.Configuration)
     .ValidateDataAnnotations()

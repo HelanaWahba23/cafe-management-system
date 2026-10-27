@@ -661,11 +661,64 @@ waits for US3 and T051; do not claim the customer QR journey complete before tha
 **Independent verification**: Given two manually created sample tables/categories/products, no
 staff session is needed for browsing; ordering/payment/POS services are unnecessary.
 
-- [ ] T044 [P] [US3] Define the public projection in `CafeManagement.Api/Contracts/PublicMenuContracts.cs`: table label/publicCode, fixed EGP, category ID/name and available product ID/name/price only; omit internal table IDs, Identity/normalization and unavailable-product data, keeping empty category/product arrays explicit (after T024; FR-006/007/008/010/011).
-- [ ] T045 [US3] Add `CafeManagement.Api/Application/PublicMenuService.cs` with anonymous per-operation factory reads, safe GUID lookup, correctly selected shared menu/table and server-side IsAvailable filter; return explicit invalid/unknown table/empty/read-failure outcomes, deterministic ID ordering, decimal EGP values and no side effects during initialization/prerender (after T044; FR-006/007/008/010/011).
-- [ ] T046 [US3] Add `CafeManagement.Api/Controllers/PublicMenuController.cs` for anonymous GET `/api/menu/tables/{publicCode}`, no-store menu response, approved price-string projection and 400/404/problem responses; never invoke staff checks, return hidden data or choose a fallback table (after T045; FR-006/007/008/010).
-- [ ] T047 [US3] Add `CafeManagement.Api/Components/Pages/Menu/TableMenu.razor` and `Components/Layout/PublicLayout.razor` with anonymous Interactive Server, direct public-service calls, visible table, Bootstrap category/product content and EGP two-place prices; implement loading/empty/invalid-table/read-error/retry-read states and keyboard/mobile usability without staff shell or login preflight (after T045; FR-006/007/008/010/011).
-- [ ] T048 [US3] Register PublicMenuService in `CafeManagement.Api/Program.cs`, confirm anonymous menu deep links in `CafeManagement.Api/Components/Routes.razor` and build `CafeManagement.sln`; verify both public controller and direct component reads enforce identical filtering/table semantics (after T046/T047; FR-006/007/010).
+- [X] T044 [P] [US3] Define the public projection in `CafeManagement.Api/Contracts/PublicMenuContracts.cs`: table label/publicCode, fixed EGP, category ID/name and available product ID/name/price only; omit internal table IDs, Identity/normalization and unavailable-product data, keeping empty category/product arrays explicit (after T024; FR-006/007/008/010/011).
+- [X] T045 [US3] Add `CafeManagement.Api/Application/PublicMenuService.cs` with anonymous per-operation factory reads, safe GUID lookup, correctly selected shared menu/table and server-side IsAvailable filter; return explicit invalid/unknown table/empty/read-failure outcomes, deterministic ID ordering, decimal EGP values and no side effects during initialization/prerender (after T044; FR-006/007/008/010/011).
+- [X] T046 [US3] Add `CafeManagement.Api/Controllers/PublicMenuController.cs` for anonymous GET `/api/menu/tables/{publicCode}`, no-store menu response, approved price-string projection and 400/404/problem responses; never invoke staff checks, return hidden data or choose a fallback table (after T045; FR-006/007/008/010).
+- [X] T047 [US3] Add `CafeManagement.Api/Components/Pages/Menu/TableMenu.razor` and `Components/Layout/PublicLayout.razor` with anonymous Interactive Server, direct public-service calls, visible table, Bootstrap category/product content and EGP two-place prices; implement loading/empty/invalid-table/read-error/retry-read states and keyboard/mobile usability without staff shell or login preflight (after T045; FR-006/007/008/010/011).
+- [X] T048 [US3] Register PublicMenuService in `CafeManagement.Api/Program.cs`, confirm anonymous menu deep links in `CafeManagement.Api/Components/Routes.razor` and build `CafeManagement.sln`; verify both public controller and direct component reads enforce identical filtering/table semantics (after T046/T047; FR-006/007/010).
+
+### Public menu implementation evidence (T044–T048, 2026-10-27)
+
+- Confirmed T001–T043 complete, clean master tracking origin/master and the 16/16 checklist gate.
+  Reviewed exact task dependencies and approved spec, plan, contracts, data model, research,
+  quickstart and Constitution. No extension hooks exist. Only T044–T048 were implemented.
+- T044: Added public-only table label/code, category ID/name and available product ID/name/price
+  records. Services/components retain decimal prices; HTTP projection formats invariant two-place
+  price strings and fixed EGP. Public responses contain no internal table ID, normalized label,
+  Identity data, category association/availability flags or unavailable-product records.
+- T045: Added an anonymous read-only service with GUID parsing, exact table-code lookup,
+  factory context creation/disposal per call, AsNoTracking projections and deterministic ID order.
+  The available-product predicate executes in SQL before projection; no staff-access dependency,
+  entity serialization, fallback table, initialization writes, application cache or polling.
+  Empty category/product arrays are explicit. Invalid/unknown links and read errors have safe
+  distinct outcomes; API cancellation is passed through rather than misreported as success.
+- T046: Anonymous GET /api/menu/tables/{publicCode} returned the exact approved public projection
+  for all five existing tables: correct label/code, shared eight categories and four available
+  products. Compared full JSON with Admin data filtered by IsAvailable; all four unavailable
+  products were absent. Prices retained two decimal places. Success/error responses were no-store;
+  malformed/unknown codes returned 400/404 ProblemDetails. Public POST returned 405.
+- T047: Added a separate public layout and anonymous Interactive Server menu page calling the
+  service directly, with visible table, Bootstrap category anchors/product lists, two-place EGP
+  prices, loading/empty-category/empty-menu/error/retry states and no staff shell/account controls.
+  Parameter changes trigger fresh reads; a load sequence prevents an older table read replacing
+  a later navigation. Signed-out direct loads for two tables, refresh, interactive reload, category
+  navigation and keyboard link focus passed. Empty categories displayed their explicit message.
+  Public browser requests did not call staff auth/login preflight endpoints.
+- Navigation review found fragment-only category anchors resolved against the host's root base
+  URL. Corrected anchors to retain /menu/t/{publicCode} before their category fragment and repeated
+  the checks successfully. Also corrected a diagnostic focus assertion that ran during reload
+  repaint. No automated test file/project was introduced to diagnose this issue.
+- A disposable second host used a process-only nonexistent database target, never creating a
+  database or changing real/local secret configuration. Its public API returned generic 500
+  ProblemDetails without SQL/credentials/stack details; the page showed safe read-error feedback
+  and a working retry-read action without stale table/products. No SQL service was stopped.
+- T048: Registered PublicMenuService as scoped. Existing Routes.razor already permits anonymous
+  components and honors the explicit public layout; no route/auth rewrite was needed. API and
+  component values/filtering matched. Anonymous Admin APIs/QR remained 401, Cashier Admin access
+  remained 403, while Cashier could also browse the public menu. Existing Admin category/product/
+  table navigation, five-forecast WeatherForecast behavior and Swagger/schema remained usable.
+- Restore and initial build passed (0 warnings/errors, 12.13 seconds). After the anchor correction,
+  rebuild passed with 0 warnings/errors (5.96 seconds). EF has-pending-model-changes reported no
+  changes. No dependencies, migrations, account handling or existing Admin source were changed.
+- Read-only before/after fingerprints matched for all five tables/codes, eight categories,
+  eight products, two Identity accounts/password/security stamps/role memberships, two roles and
+  one migration. No data was created, edited or deleted. Validation hosts were stopped afterward.
+- Validation used disposable Edge contexts/in-memory commands, with a diagnostic-context HTTPS
+  certificate override only for Node-backed requests; application/certificate settings unchanged.
+  No secrets, generated artifacts or automated tests belong in this change. Dedicated T049/T050
+  scenario/mobile reviews and T051 physical-phone QR acceptance remain unperformed and unchecked;
+  no full-feature acceptance is claimed. T049 and all later tasks remain outside this execution.
+
 - [ ] T049 [US3] Manually verify `CafeManagement.Api/Components/Pages/Menu/TableMenu.razor` and `Controllers/PublicMenuController.cs` signed out: two-table context, EGP precision, unavailable filtering in returned data, restore availability/changed price on next reload, empty/all-unavailable menu, malformed/unknown links and safe read failures; record outcomes here (after T048 with sample data; FR-006/007/008/010/011, SC-003/006/007/008).
 - [ ] T050 [US3] Check `CafeManagement.Api/Components/Pages/Menu/TableMenu.razor` at 360/390/1280px for readable names/prices, usable category controls, focus/keyboard access and zero horizontal page scrolling; record responsive results here without adding an automated suite (after T049; FR-007, SC-004).
 

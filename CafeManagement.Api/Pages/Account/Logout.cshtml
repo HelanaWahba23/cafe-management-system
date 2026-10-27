@@ -1,2 +1,22 @@
 @page "/account/logout"
 @model CafeManagement.Api.Pages.Account.LogoutModel
+@{ Layout = null; }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sign out | Cafe Management</title>
+    <link rel="stylesheet" href="/lib/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+<main class="container py-4">
+    <h1>Sign out</h1>
+    <form method="post" data-enhance="false" asp-antiforgery="false">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn-outline-secondary">Sign out</button>
+    </form>
+</main>
+</body>
+</html>

@@ -2,8 +2,10 @@ using CafeManagement.Api.Infrastructure.Persistence;
 using CafeManagement.Api.Infrastructure.Identity;
 using CafeManagement.Api.Application;
 using CafeManagement.Api.Components;
+using CafeManagement.Api.Contracts;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,6 +21,8 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>()
     .AddDefaultTokenProviders();
 
 builder.Services.AddControllers();
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+    options.InvalidModelStateResponseFactory = ApiErrors.InvalidModelState);
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -92,6 +96,34 @@ if (args.Contains("--bootstrap-user", StringComparer.Ordinal))
 }
 
 // Configure the HTTP request pipeline.
+app.UseWhen(context => context.Request.Path.StartsWithSegments("/api"), api =>
+{
+    api.Use(async (context, next) =>
+    {
+        try
+        {
+            await next(context);
+        }
+        catch (Exception) when (!context.Response.HasStarted && !context.RequestAborted.IsCancellationRequested)
+        {
+            // Log a correlation ID without leaking exception/configuration text.
+            app.Logger.LogError("API request failed. Trace identifier: {TraceIdentifier}", context.TraceIdentifier);
+            context.Response.Clear();
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            await context.Response.WriteAsJsonAsync(ApiErrors.ForStatus(500),
+                options: (System.Text.Json.JsonSerializerOptions?)null,
+                contentType: "application/problem+json", cancellationToken: context.RequestAborted);
+        }
+    });
+    api.UseStatusCodePages(async (Microsoft.AspNetCore.Diagnostics.StatusCodeContext statusContext) =>
+    {
+        var response = statusContext.HttpContext.Response;
+        await response.WriteAsJsonAsync(ApiErrors.ForStatus(response.StatusCode),
+            options: (System.Text.Json.JsonSerializerOptions?)null,
+            contentType: "application/problem+json", cancellationToken: statusContext.HttpContext.RequestAborted);
+    });
+});
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

@@ -315,10 +315,64 @@ management and public browsing, so their shared schema belongs here rather than 
   presentation refinement (T022) and their complete integration checkpoints remain later work.
   Credentials/local settings/build artifacts are excluded from the reviewed source commit.
 
-- [ ] T021 Define only the minimal shared service failure/field-error shape in `CafeManagement.Api/Application/OperationError.cs` and HTTP mapping in `CafeManagement.Api/Contracts/ApiErrors.cs`, wiring safe ProblemDetails/validation responses in `CafeManagement.Api/Program.cs`; cover denied/not-found/invalid/conflict and generic 500 without secret disclosure, not a generic application framework (after T020; FR-001/004/008/011).
-- [ ] T022 Finish accessible Bootstrap HTTP account presentation in `CafeManagement.Api/Pages/_ViewImports.cshtml`, `Pages/Account/Login.cshtml` and `Pages/Account/Logout.cshtml`; ensure full form posts include antiforgery and no enhanced same-circuit cookie interception, with readable errors and keyboard labels (after T017–T020; FR-001).
-- [ ] T023 Build `CafeManagement.sln`, run its existing HTTPS profile from `CafeManagement.Api/Properties/launchSettings.json` and verify Swagger, `/WeatherForecast`, static CSS, HTTP account pages and component host coexist without runtime DI/options/route errors; record any real failure before adding feature services (after T021/T022; Constitution II/VI).
-- [ ] T024 Manually verify `CafeManagement.Api/Pages/Account/Login.cshtml`, `Logout.cshtml` and `Controllers/AuthController.cs`: valid/invalid credentials, Admin/Cashier session roles, cookie flags, missing/invalid CSRF and logout/new HTTP principal; inspect service/circuit authorization lifetimes and record evidence here; management redirects are not accepted as complete feature screens until their story phases (after T023; FR-001 foundation checkpoint).
+- [X] T021 Define only the minimal shared service failure/field-error shape in `CafeManagement.Api/Application/OperationError.cs` and HTTP mapping in `CafeManagement.Api/Contracts/ApiErrors.cs`, wiring safe ProblemDetails/validation responses in `CafeManagement.Api/Program.cs`; cover denied/not-found/invalid/conflict and generic 500 without secret disclosure, not a generic application framework (after T020; FR-001/004/008/011).
+- [X] T022 Finish accessible Bootstrap HTTP account presentation in `CafeManagement.Api/Pages/_ViewImports.cshtml`, `Pages/Account/Login.cshtml` and `Pages/Account/Logout.cshtml`; ensure full form posts include antiforgery and no enhanced same-circuit cookie interception, with readable errors and keyboard labels (after T017–T020; FR-001).
+- [X] T023 Build `CafeManagement.sln`, run its existing HTTPS profile from `CafeManagement.Api/Properties/launchSettings.json` and verify Swagger, `/WeatherForecast`, static CSS, HTTP account pages and component host coexist without runtime DI/options/route errors; record any real failure before adding feature services (after T021/T022; Constitution II/VI).
+- [X] T024 Manually verify `CafeManagement.Api/Pages/Account/Login.cshtml`, `Logout.cshtml` and `Controllers/AuthController.cs`: valid/invalid credentials, Admin/Cashier session roles, cookie flags, missing/invalid CSRF and logout/new HTTP principal; inspect service/circuit authorization lifetimes and record evidence here; management redirects are not accepted as complete feature screens until their story phases (after T023; FR-001 foundation checkpoint).
+
+### Foundation completion evidence (T021–T024, 2026-10-27)
+
+- Verified T001–T020 complete, clean starting working tree and 16/16 passing requirements
+  checklist. Reviewed exact dependencies, approved plan/model/contracts and Constitution;
+  no extension hooks are present. No tasks beyond T024 were executed.
+- T021: Added only OperationError kind/message/code/field/field-error data and ApiErrors mapping.
+  Verified unauthenticated/forbidden/not-found/invalid/conflict/unexpected map to 401/403/404/
+  400/409/500 with application/problem+json; validation preserves safe field feedback, duplicate
+  table-label conflict preserves errorCode/field, and unexpected errors suppress supplied text
+  and metadata. Model-state mapping replaces raw framework errors with safe field messages.
+  Added API-only status/exception handling in Program.cs; generic failures log a correlation ID
+  without logging raw exception/configuration text from that boundary. No result framework,
+  new business service or endpoint was introduced. HTTP 401/404 ProblemDetails checks passed.
+  A temporary second host used a process-only nonexistent database target to trigger a read
+  failure in existing /api/auth/me: returned generic HTTP 500 ProblemDetails without exception,
+  server/database or credential disclosure. No database was created or modified by that host;
+  real local connection configuration remained unchanged. EF's own server diagnostics remained
+  server-side. Direct model-state/mapping checks cover cases whose business APIs do not exist yet.
+- T022: Added shared Razor tag-helper imports and responsive Bootstrap account presentation,
+  heading/label associations, native required inputs, per-field descriptions and live error
+  summary. Account forms explicitly render antiforgery tokens and disable enhanced submission;
+  automatic duplicate generation is disabled where Html.AntiForgeryToken is explicit. No
+  interactive account rendering or cookie mutation was introduced. Login/access-denied forms
+  render normally; logout still preserves its existing GET 405 and successful POST redirect.
+  Logout.cshtml has a matching safe fallback form, without changing existing handler behavior.
+  Source/HTTP markup checks confirmed labels, error associations and no Blazor account script.
+- T023: Restore succeeded; final dotnet build CafeManagement.sln --no-restore succeeded with
+  0 warnings and 0 errors (1.57 seconds). Initial compilation caught an incorrect .NET 8 JSON
+  response overload; it was corrected before the successful build/runtime checks. EF reports
+  no pending model/snapshot changes. Existing HTTPS Development profile starts without DI,
+  options or routing errors; Bootstrap/site CSS, account pages, framework Blazor script,
+  Interactive Server negotiation, Swagger and five-record WeatherForecast coexist successfully.
+  Unknown /api routes return JSON 404, not component HTML. Both validation hosts were stopped.
+- T024: Existing Admin and Cashier passed valid login, generic invalid credentials, correct
+  email/role session response, HttpOnly/Secure/SameSite=Lax session-cookie flags, no-store auth
+  responses and safe external-returnUrl handling. Missing and invalid login/logout CSRF were
+  rejected with 400; rejected logout preserved authentication, GET logout returned 405, and a
+  fresh valid header token allowed POST logout. Subsequent /api/auth/me returned a new anonymous
+  HTTP principal/401. Cashier authenticates but receives the approved 403 management denial.
+  One invalid credential attempt per account was followed by valid login; no lockout triggered.
+  Read-only before/after fingerprints verified schema/migration/account/role/membership counts,
+  password hashes and security stamps unchanged. No credentials were printed or committed.
+- Reviewed StaffAccess and circuit provider: each authenticated check creates/disposes a short
+  Identity scope; no HttpContext/UserManager/DbContext is retained by a circuit helper. Staff
+  checks use current database membership/stamp. Revalidation remains 30-minute stamp checking,
+  with no immediate cross-tab sign-out claim. No schema/account reset, migration/provisioning,
+  database cleanup, new dependencies or automated test files. Lightweight validation command
+  corrections handled PowerShell JSON byte content and a reserved variable; no failed check
+  was counted as passed until corrected and rerun successfully.
+- T001–T024 are complete. Management/menu screens remain later story tasks, and login's Admin
+  redirect is not evidence of their completion. Physical-phone UI and full connected-screen
+  checks remain later feature validation. Only scoped source/presentation/task evidence changed;
+  existing entities, migrations, accounts, authentication handlers and Blazor components remain.
 
 **Checkpoint**: Shared foundation builds and authentication works. Management authorization must
 still be validated against real story endpoints/components in their subsequent checkpoints.

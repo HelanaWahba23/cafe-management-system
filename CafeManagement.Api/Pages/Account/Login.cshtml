@@ -1,6 +1,5 @@
 @page "/account/login"
 @model CafeManagement.Api.Pages.Account.LoginModel
-@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @{ Layout = null; }
 <!DOCTYPE html>
 <html lang="en">
@@ -12,33 +11,41 @@
     <link rel="stylesheet" href="/css/site.css" />
 </head>
 <body>
-<main class="container py-4">
+<main class="container py-4" id="main-content">
+<div class="row justify-content-center">
+<section class="col-12 col-md-8 col-lg-5" aria-labelledby="account-heading">
     @if (Model.AccessDenied)
     {
-        <h1>Access denied</h1>
+        <h1 id="account-heading">Access denied</h1>
         <p>Your account does not have access to menu and table management.</p>
-        <form method="post" action="/account/logout" data-enhance="false">
+        <form method="post" action="/account/logout" data-enhance="false" asp-antiforgery="false">
             @Html.AntiForgeryToken()
             <button type="submit" class="btn btn-outline-secondary">Sign out</button>
         </form>
     }
     else
     {
-        <h1>Staff sign in</h1>
-        <form method="post" data-enhance="false" class="col-md-6 col-lg-4">
+        <h1 id="account-heading">Staff sign in</h1>
+        <p id="sign-in-help">Use your staff email and password.</p>
+        <form method="post" data-enhance="false" asp-antiforgery="false" aria-describedby="sign-in-help">
+            @Html.AntiForgeryToken()
             <input type="hidden" asp-for="ReturnUrl" />
-            <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+            <div asp-validation-summary="All" class="text-danger mb-3" role="alert" aria-live="polite"></div>
             <div class="mb-3">
                 <label asp-for="Input.Email" class="form-label"></label>
-                <input asp-for="Input.Email" class="form-control" autocomplete="username" />
+                <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-describedby="email-error" required />
+                <span asp-validation-for="Input.Email" id="email-error" class="text-danger"></span>
             </div>
             <div class="mb-3">
                 <label asp-for="Input.Password" class="form-label"></label>
-                <input asp-for="Input.Password" class="form-control" autocomplete="current-password" />
+                <input asp-for="Input.Password" class="form-control" autocomplete="current-password" aria-describedby="password-error" required />
+                <span asp-validation-for="Input.Password" id="password-error" class="text-danger"></span>
             </div>
             <button type="submit" class="btn btn-primary">Sign in</button>
         </form>
     }
+</section>
+</div>
 </main>
 </body>
 </html>

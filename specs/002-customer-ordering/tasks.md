@@ -3,7 +3,7 @@
 **Input**: Approved [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [API contract](contracts/api.md), [UI contract](contracts/ui.md),
 [quickstart.md](quickstart.md), requirements.md and Constitution v1.0.1.
-**Created**: 2026-10-27. **Status**: T001–T008 validated; T009–T063 not started.
+**Created**: 2026-10-27. **Status**: T001–T013 validated; T014–T063 not started.
 **Organization**: Setup → shared foundation → US1/US2/US3/US4 → cross-cutting validation.
 **Validation policy**: Restore/build and manual checks; no generated automated tests by default.
 Only an explicitly requested test or a concrete bug requiring diagnosis can justify an exception.
@@ -46,11 +46,11 @@ requires confirmed target/review/backup readiness from T003, not an assumed disp
 - [X] T006 Complete `CafeManagement.Api/Domain/Order.cs` with Type "nvarchar(16), DineIn or Pickup only"; TableId "nullable int FK to CafeTables, delete restricted"; TableLabel "nullable nvarchar(120), accepted table-label snapshot"; CustomerName "nvarchar(120), required, trimmed/nonblank"; CustomerPhone "nvarchar(40), required, trimmed/nonblank; preserve entered formatting"; Currency "char(3), required, EGP only"; Total "decimal(18,2), required, positive; sum of saved line amounts"; Status "nvarchar(16), Submitted initially; Preparing, Ready, Completed, Rejected allowed"; RejectionReason "nullable nvarchar(500); required/nonblank iff Rejected" and order-line relationship (after T005; FR-003/004/006/008/013).
 - [X] T007 Create `CafeManagement.Api/Domain/OrderLine.cs` with Id "bigint identity primary key"; OrderId "required bigint FK to Orders, delete restricted"; ProductId "required int FK to Products, delete restricted"; ProductName "required nonblank nvarchar(120), accepted snapshot"; Quantity "int > 0, whole number"; UnitPrice "decimal(18,2) > 0, accepted authoritative price"; LineTotal "decimal(18,2) > 0; exact UnitPrice × Quantity"; compile the completed domain types together without changing existing entities (after T006; FR-002/005/006).
 - [X] T008 [P] Configure `CafeManagement.Api/Infrastructure/Persistence/Configurations/OrderConfiguration.cs` exactly per T005/T006: unique Reference/CapabilityHash, binary lengths, field lengths/precision, rowversion, restrictive table FK, TableId and (Status, CreatedAtUtc) indexes; checks for valid Type/Status/Currency, positive Total, nonblank name/phone, DineIn table/label required versus Pickup both null, and nonblank reason iff Rejected (after T007; parallel with T009/T010; FR-003/004/005/007/008/013).
-- [ ] T009 [P] Configure `CafeManagement.Api/Infrastructure/Persistence/Configurations/OrderLineConfiguration.cs` exactly per T007, including restrictive order/product FKs, unique (OrderId, ProductId), ProductId index, nonblank snapshot name, positive quantity/price/line total and widened-decimal SQL arithmetic check; do not claim cross-row sum/nonempty-line invariants are SQL CHECKs (after T007; parallel with T008/T010; FR-002/005/006).
-- [ ] T010 [P] Create the internal `CafeManagement.Api/Application/OrderLifecycle.cs` rule allowing only Submitted→Preparing, Preparing→Ready, Ready→Completed and Submitted→Rejected with a trimmed nonblank reason of at most 500 characters; Completed/Rejected terminal; no public setter/endpoint/staff UI; verify rule table manually against every state pair using an in-memory diagnostic if needed (after T007; parallel with T008/T009; FR-008, SC-005, future POS boundary).
-- [ ] T011 Add Orders/OrderLines to `CafeManagement.Api/Infrastructure/Persistence/CafeDbContext.cs` and apply the two new configurations; verify existing DbSets, Identity mapping, product/table schemas and context-factory registration remain intact; build the solution (after T008–T010; FR-005/012).
-- [ ] T012 Generate one additive AddCustomerOrders migration in `CafeManagement.Api/Infrastructure/Persistence/Migrations/` after `20261027013745_InitialMenuAndIdentity`, including generated `*_AddCustomerOrders.cs`, designer and `CafeDbContextModelSnapshot.cs`; generate reviewed SQL to ignored `artifacts/customer-orders.sql`, record exact generated paths in this file, and stop on any unintended existing table/data/Identity alteration, reset or migration rewrite (after T011; FR-005/012, Constitution II/IV).
-- [ ] T013 Apply the reviewed migration only to the confirmed authorized target(s) after T003 safety gates; verify new tables/indexes/checks/FKs and original catalog/table/QR/Identity fingerprints, and record outcomes in `specs/002-customer-ordering/tasks.md`; no EnsureCreated/EnsureDeleted, startup migration, account provisioning, reseeding, destructive downgrade or QR regeneration (after T012; FR-005/012, Constitution II/IV).
+- [X] T009 [P] Configure `CafeManagement.Api/Infrastructure/Persistence/Configurations/OrderLineConfiguration.cs` exactly per T007, including restrictive order/product FKs, unique (OrderId, ProductId), ProductId index, nonblank snapshot name, positive quantity/price/line total and widened-decimal SQL arithmetic check; do not claim cross-row sum/nonempty-line invariants are SQL CHECKs (after T007; parallel with T008/T010; FR-002/005/006).
+- [X] T010 [P] Create the internal `CafeManagement.Api/Application/OrderLifecycle.cs` rule allowing only Submitted→Preparing, Preparing→Ready, Ready→Completed and Submitted→Rejected with a trimmed nonblank reason of at most 500 characters; Completed/Rejected terminal; no public setter/endpoint/staff UI; verify rule table manually against every state pair using an in-memory diagnostic if needed (after T007; parallel with T008/T009; FR-008, SC-005, future POS boundary).
+- [X] T011 Add Orders/OrderLines to `CafeManagement.Api/Infrastructure/Persistence/CafeDbContext.cs` and apply the two new configurations; verify existing DbSets, Identity mapping, product/table schemas and context-factory registration remain intact; build the solution (after T008–T010; FR-005/012).
+- [X] T012 Generate one additive AddCustomerOrders migration in `CafeManagement.Api/Infrastructure/Persistence/Migrations/` after `20261027013745_InitialMenuAndIdentity`, including generated `*_AddCustomerOrders.cs`, designer and `CafeDbContextModelSnapshot.cs`; generate reviewed SQL to ignored `artifacts/customer-orders.sql`, record exact generated paths in this file, and stop on any unintended existing table/data/Identity alteration, reset or migration rewrite (after T011; FR-005/012, Constitution II/IV).
+- [X] T013 Apply the reviewed migration only to the confirmed authorized target(s) after T003 safety gates; verify new tables/indexes/checks/FKs and original catalog/table/QR/Identity fingerprints, and record outcomes in `specs/002-customer-ordering/tasks.md`; no EnsureCreated/EnsureDeleted, startup migration, account provisioning, reseeding, destructive downgrade or QR regeneration (after T012; FR-005/012, Constitution II/IV).
 - [ ] T014 Define `CafeManagement.Api/Contracts/OrderContracts.cs` with OrderDraft, item, ReviewedPrice, Review, placement result and minimal Tracking shapes from `contracts/api.md`; enforce name/phone trimmed nonblank capacities 120/40, nonempty unique product IDs, positive whole int quantities, valid DineIn table UUID versus Pickup null/absent, exactly matching reviewed-price IDs and invariant positive two-place EGP strings; reject overflow/overprecision, prohibited/unknown write fields and truncation; no regional phone/account/quantity policy or contact fields in responses (after T013; FR-002–FR-010/013).
 - [ ] T015 Configure only new order HTTP route protections in `CafeManagement.Api/Program.cs`: named configurable remote-IP fixed-window limiter initially 60 requests/minute, queue 0 and Retry-After; correct routing/middleware order; no-store/no-referrer for `/menu/t/*`, `/menu/pickup`, `/orders/track` and no-store order APIs; verify diagnostic configuration does not log bearer/body/contact/hash data; preserve Identity/CORS/antiforgery/original route behavior (after T014; FR-009/010/011/012/013).
 - [ ] T016 Run restore/build and inspect registered schema/value contracts without introducing new dependencies; manually verify SQL field capacities, unique digests/references, FK/type/reason/price/quantity checks and unchanged existing records on the isolated target; record results and limitations in `specs/002-customer-ordering/tasks.md` (after T015; FR-005/006/007/008/012, Constitution VI).
@@ -353,3 +353,63 @@ authorized validated scope and never pre-existing unrelated edits or secrets.
   No original or validation records, migration files, account credentials or configuration changed.
 - Reviewed the final source/task diff and secret/ignore boundaries. T004–T008 are complete;
   T009–T063 remain unchecked. No POS, payment, delivery, API/UI, migration or unrelated change.
+
+### Order-line mapping, lifecycle and additive migration evidence (T009–T013, 2026-10-27)
+
+- Started from clean master at c9514564df7102a60f98abc71ac576c8b69616e7 with T001–T008
+  complete. Reviewed exact selected dependencies and approved artifacts/Constitution; the
+  quality checklist remains 16/16. Feature 001 remains byte-identical with 54 tasks complete
+  and only T051/T056 pending. No extension hooks or additional repository instructions.
+- T009: Added OrderLineConfiguration with decimal(18,2) UnitPrice/LineTotal, required
+  120-character snapshot name, positive quantity/amount checks, widened decimal(29,2)
+  arithmetic comparison, unique (OrderId, ProductId), ProductId index and restrictive
+  order/product foreign keys. EF model inspection now emits zero decimal precision warnings.
+  Nonempty lines and summed Order.Total remain future transactional service invariants;
+  this task does not claim SQL CHECK enforcement of cross-row rules.
+- T010: Added internal OrderLifecycle.TryTransition with only Submitted → Preparing,
+  Preparing → Ready, Ready → Completed and Submitted → Rejected. Rejection requires a
+  trimmed nonblank reason of at most 500 characters. Completed/Rejected are terminal;
+  invalid transitions leave the order unchanged. No public status setter, endpoint or staff UI.
+  In-memory reflection verified all 25 state pairs, six rejection boundaries (including
+  Unicode whitespace, 500/501 characters and trimming), inappropriate non-rejection reasons
+  and unknown status rejection. No test project/framework or diagnostic file was added.
+- T011: Added Orders/OrderLines DbSets only; existing assembly-based configuration discovery
+  applies both mappings. Existing DbSets, Identity configuration, context factory registration,
+  Program.cs, authentication and routes are unchanged. All ten prior EF table definitions
+  and ten prior indexes matched the before-model SQL exactly.
+- T012: Generated and fully reviewed the additive migration:
+  - CafeManagement.Api/Infrastructure/Persistence/Migrations/20261027141549_AddCustomerOrders.cs
+  - CafeManagement.Api/Infrastructure/Persistence/Migrations/20261027141549_AddCustomerOrders.Designer.cs
+  - CafeManagement.Api/Infrastructure/Persistence/Migrations/CafeDbContextModelSnapshot.cs
+  Generated SQL is retained only in ignored artifacts/customer-orders.sql. Up creates only
+  Orders/OrderLines, 13 checks, three NO ACTION foreign keys, two primary keys and six secondary
+  indexes, then appends migration history. Existing tables/data and initial migration are
+  untouched. Designer and snapshot model bodies match; EF reports no pending model changes.
+  The generated Down method drops only the new tables and was never executed.
+- T013: Rechecked all original/copy row fingerprints and the owned-copy marker. Revalidated
+  the T003 COPY_ONLY/CHECKSUM backup header and RESTORE VERIFYONLY WITH CHECKSUM; its original
+  data fingerprints still matched. Applied the reviewed migration first to the owned
+  CafeManagement_F002_Validation_20261027_134110_c57ad692 database using a process-only
+  connection override, then to the confirmed CafeManagement database after isolated success.
+  Local user secrets/default connection and backup remain unchanged outside Git.
+- All 32 temporary SQL probes on the owned validation copy passed and rolled back: valid
+  pickup/dine-in, maximum decimal/int values, invalid names/quantities/amounts/arithmetic,
+  widened-product rejection without arithmetic overflow, decimal storage overflow, duplicate
+  products/reference/digest, missing order/product FKs, restrictive parent deletion, and
+  header type/status/currency/contact/table/reason constraints. No probe records remain.
+  These are scoped manual diagnostics, not a generated or committed automated test suite.
+- Physical verification passed on both targets: 13 enabled/trusted checks, three enabled/
+  trusted NO ACTION FKs, six expected secondary indexes/uniqueness, decimal(18,2) money and
+  required rowversion. Both migration histories contain the unchanged initial EF 8.0.33 row
+  plus 20261027141549_AddCustomerOrders. Both new tables are empty on both targets.
+- All ten pre-existing data-table row counts and full-row SHA-256 fingerprints matched
+  before/after, including five table/QR records, eight categories, eight products and two
+  Identity users/roles/memberships. No original account or record was changed. No reset,
+  reseeding, startup migration, account provisioning, QR regeneration or downgrade occurred.
+- Solution restore passed; final dotnet build CafeManagement.sln --no-restore passed with
+  0 warnings/0 errors (5.12 seconds). EF has-pending-model-changes passed. Before updating
+  this evidence, 106 pre-existing source/configuration/planning files were byte-identical
+  except the approved context and model snapshot edits. Reviewed source/migration/task diff
+  and ignore/secret boundaries; build outputs and SQL artifacts stay excluded.
+- T009–T013 are complete. T014–T063 remain unchecked and were not implemented. No cart,
+  ordering API/UI, POS, payments, delivery, network, certificate or package changes.

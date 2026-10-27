@@ -81,6 +81,163 @@ namespace CafeManagement.Api.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("CafeManagement.Api.Domain.Order", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<byte[]>("CapabilityHash")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("binary(32)")
+                        .IsFixedLength();
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
+                        .IsFixedLength();
+
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("CustomerPhone")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<byte[]>("IntentHash")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("binary(32)")
+                        .IsFixedLength();
+
+                    b.Property<Guid>("Reference")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<int?>("TableId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TableLabel")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CapabilityHash")
+                        .IsUnique();
+
+                    b.HasIndex("Reference")
+                        .IsUnique();
+
+                    b.HasIndex("TableId");
+
+                    b.HasIndex("Status", "CreatedAtUtc");
+
+                    b.ToTable("Orders", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Orders_Currency", "[Currency] = 'EGP'");
+
+                            t.HasCheckConstraint("CK_Orders_CustomerName_NotBlank", "LEN(LTRIM(RTRIM([CustomerName]))) > 0");
+
+                            t.HasCheckConstraint("CK_Orders_CustomerPhone_NotBlank", "LEN(LTRIM(RTRIM([CustomerPhone]))) > 0");
+
+                            t.HasCheckConstraint("CK_Orders_RejectionReason", "([Status] = N'Rejected' AND [RejectionReason] IS NOT NULL AND LEN(LTRIM(RTRIM([RejectionReason]))) > 0) OR ([Status] <> N'Rejected' AND [RejectionReason] IS NULL)");
+
+                            t.HasCheckConstraint("CK_Orders_Status", "[Status] IN (N'Submitted', N'Preparing', N'Ready', N'Completed', N'Rejected')");
+
+                            t.HasCheckConstraint("CK_Orders_TableContext", "([Type] = N'DineIn' AND [TableId] IS NOT NULL AND [TableLabel] IS NOT NULL AND LEN(LTRIM(RTRIM([TableLabel]))) > 0) OR ([Type] = N'Pickup' AND [TableId] IS NULL AND [TableLabel] IS NULL)");
+
+                            t.HasCheckConstraint("CK_Orders_Total_Positive", "[Total] > 0");
+
+                            t.HasCheckConstraint("CK_Orders_Type", "[Type] IN (N'DineIn', N'Pickup')");
+                        });
+                });
+
+            modelBuilder.Entity("CafeManagement.Api.Domain.OrderLine", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<decimal>("LineTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<long>("OrderId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("OrderId", "ProductId")
+                        .IsUnique();
+
+                    b.ToTable("OrderLines", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_OrderLines_LineTotal_Arithmetic", "CONVERT(decimal(29,2), [LineTotal]) = CONVERT(decimal(18,2), [UnitPrice]) * CONVERT(decimal(10,0), [Quantity])");
+
+                            t.HasCheckConstraint("CK_OrderLines_LineTotal_Positive", "[LineTotal] > 0");
+
+                            t.HasCheckConstraint("CK_OrderLines_ProductName_NotBlank", "LEN(LTRIM(RTRIM([ProductName]))) > 0");
+
+                            t.HasCheckConstraint("CK_OrderLines_Quantity_Positive", "[Quantity] > 0");
+
+                            t.HasCheckConstraint("CK_OrderLines_UnitPrice_Positive", "[UnitPrice] > 0");
+                        });
+                });
+
             modelBuilder.Entity("CafeManagement.Api.Domain.Product", b =>
                 {
                     b.Property<int>("Id")
@@ -314,6 +471,35 @@ namespace CafeManagement.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("CafeManagement.Api.Domain.Order", b =>
+                {
+                    b.HasOne("CafeManagement.Api.Domain.CafeTable", "Table")
+                        .WithMany()
+                        .HasForeignKey("TableId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Table");
+                });
+
+            modelBuilder.Entity("CafeManagement.Api.Domain.OrderLine", b =>
+                {
+                    b.HasOne("CafeManagement.Api.Domain.Order", "Order")
+                        .WithMany("Lines")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CafeManagement.Api.Domain.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("CafeManagement.Api.Domain.Product", b =>
                 {
                     b.HasOne("CafeManagement.Api.Domain.MenuCategory", "Category")
@@ -379,6 +565,11 @@ namespace CafeManagement.Api.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("CafeManagement.Api.Domain.MenuCategory", b =>
                 {
                     b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("CafeManagement.Api.Domain.Order", b =>
+                {
+                    b.Navigation("Lines");
                 });
 #pragma warning restore 612, 618
         }

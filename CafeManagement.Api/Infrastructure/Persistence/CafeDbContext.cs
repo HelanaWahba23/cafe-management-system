@@ -9,6 +9,8 @@ public sealed class CafeDbContext(DbContextOptions<CafeDbContext> options) : Ide
     public DbSet<MenuCategory> MenuCategories => Set<MenuCategory>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<CafeTable> CafeTables => Set<CafeTable>();
+    public DbSet<Order> Orders => Set<Order>();
+    public DbSet<OrderLine> OrderLines => Set<OrderLine>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

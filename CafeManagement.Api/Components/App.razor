@@ -1,3 +1,4 @@
+@using CafeManagement.Api.Components.Shared
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,7 +10,9 @@
     <HeadOutlet />
 </head>
 <body>
-    <Routes />
+    <div id="app-content"><Routes /></div>
+    <ReconnectStatus />
+    <script src="js/reconnect-status.js"></script>
     <script src="_framework/blazor.web.js"></script>
 </body>
 </html>

@@ -46,7 +46,7 @@ else
         </div>
     }
     <h2>@(selected is null ? "Add table" : $"Edit table {selected.Id}")</h2>
-    <EditForm EditContext="editContext" OnSubmit="SaveAsync" FormName="table-editor">
+    <EditForm EditContext="editContext" OnSubmit="SaveAsync" FormName="table-editor" data-admin-write="true">
         <DataAnnotationsValidator />
         <ValidationSummary class="text-danger" />
         <fieldset disabled="@saving" class="col-md-8 col-lg-6">

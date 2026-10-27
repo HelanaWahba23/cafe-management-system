@@ -20,3 +20,27 @@ img {
     outline: 0.2rem solid var(--bs-primary, #0d6efd);
     outline-offset: 0.15rem;
 }
+
+#components-reconnect-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.6);
+    overflow-y: auto;
+}
+
+#components-reconnect-modal.components-reconnect-show,
+#components-reconnect-modal.components-reconnect-failed,
+#components-reconnect-modal.components-reconnect-rejected,
+#components-reconnect-modal[data-reload-required="true"] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#components-reconnect-modal > .card {
+    width: 100%;
+    max-width: 32rem;
+}

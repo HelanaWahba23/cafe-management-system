@@ -44,7 +44,7 @@ else
         </div>
     }
     <h2>@(editingId is null ? "Add category" : $"Edit category {editingId}")</h2>
-    <EditForm EditContext="editContext" OnSubmit="SaveAsync" FormName="category-editor">
+    <EditForm EditContext="editContext" OnSubmit="SaveAsync" FormName="category-editor" data-admin-write="true">
         <DataAnnotationsValidator />
         <ValidationSummary class="text-danger" />
         <fieldset disabled="@saving" class="col-md-8 col-lg-6">

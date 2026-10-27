@@ -794,11 +794,97 @@ No unrelated cleanup, speculative optimization or additional business features.
 - T049–T050 local validation passed. Only their completion evidence and the T051 blocker are
   recorded here; T052 and all later tasks remain unchecked and were not executed.
 
-- [ ] T052 Add the minimal .NET 8 reconnect status UI in `CafeManagement.Api/Components/Shared/ReconnectStatus.razor` and wire it in `Components/App.razor`; review the three admin page save handlers and `Components/Pages/Menu/TableMenu.razor` for disconnect feedback, disabled/guarded submits, no automatic write replay and record reload after an uncertain save; manually interrupt/reconnect the browser and record findings (after all stories; FR-004/008).
-- [ ] T053 Review `CafeManagement.Api/Application/StaffAccess.cs`, `Infrastructure/Identity/IdentityRevalidatingAuthenticationStateProvider.cs`, `Program.cs` and account pages against `contracts/api.md`: verify API and component authorization, current-user/stamp/role checks, token rejection, cookie flags, safe redirects/errors and full-navigation identity changes; use local controlled stamp invalidation/two-tab checks without claiming ordinary logout instantly revokes every circuit (after T052; FR-001/008, SC-005/006).
-- [ ] T054 Validate SQL/data/circuit behavior through `CafeManagement.Api/Infrastructure/Persistence/CafeDbContext.cs`, entity configurations and migration: simultaneous duplicate-label requests yield one accepted write/one conflict, FK/price/name constraints hold, independent tabs do not share tracked state, and restart retains all values/codes; record manual results here without touching unrelated data (after T053; FR-004/006/011).
-- [ ] T055 Run `dotnet build CafeManagement.sln -c Release` and `dotnet publish CafeManagement.Api -c Release --no-restore -o artifacts/cafe`; inspect published local Bootstrap assets and compiled pages, recheck original `/WeatherForecast`/Swagger/ports plus direct menu/admin paths and unknown `/api/*` responses, and confirm `.gitignore` excludes output/secrets; record evidence here without deploying (after T054; Constitution II/VI).
+- [X] T052 Add the minimal .NET 8 reconnect status UI in `CafeManagement.Api/Components/Shared/ReconnectStatus.razor` and wire it in `Components/App.razor`; review the three admin page save handlers and `Components/Pages/Menu/TableMenu.razor` for disconnect feedback, disabled/guarded submits, no automatic write replay and record reload after an uncertain save; manually interrupt/reconnect the browser and record findings (after all stories; FR-004/008).
+- [X] T053 Review `CafeManagement.Api/Application/StaffAccess.cs`, `Infrastructure/Identity/IdentityRevalidatingAuthenticationStateProvider.cs`, `Program.cs` and account pages against `contracts/api.md`: verify API and component authorization, current-user/stamp/role checks, token rejection, cookie flags, safe redirects/errors and full-navigation identity changes; use local controlled stamp invalidation/two-tab checks without claiming ordinary logout instantly revokes every circuit (after T052; FR-001/008, SC-005/006).
+- [X] T054 Validate SQL/data/circuit behavior through `CafeManagement.Api/Infrastructure/Persistence/CafeDbContext.cs`, entity configurations and migration: simultaneous duplicate-label requests yield one accepted write/one conflict, FK/price/name constraints hold, independent tabs do not share tracked state, and restart retains all values/codes; record manual results here without touching unrelated data (after T053; FR-004/006/011).
+- [X] T055 Run `dotnet build CafeManagement.sln -c Release` and `dotnet publish CafeManagement.Api -c Release --no-restore -o artifacts/cafe`; inspect published local Bootstrap assets and compiled pages, recheck original `/WeatherForecast`/Swagger/ports plus direct menu/admin paths and unknown `/api/*` responses, and confirm `.gitignore` excludes output/secrets; record evidence here without deploying (after T054; Constitution II/VI).
 - [ ] T056 Review all acceptance scenarios in `specs/001-menu-table-management/spec.md` against this file's evidence and `quickstart.md`; confirm FR-001–FR-011/SC-001–SC-008 coverage, no deletion/deactivation/orders/POS/payments/reports endpoints/screens, no unnecessary generated tests, and no unapproved source removal; summarize completed/blocked/skipped validations in `specs/001-menu-table-management/tasks.md` for user review, never mark blocked checks passed (after T055).
+
+### Independent polish execution evidence (T052–T055, 2026-10-27)
+
+- The user explicitly postponed T051 and authorized independent T052–T056 work. T052 depends on
+  the completed story checkpoints through T050, not the physical-phone scan; T053 -> T054 -> T055
+  then follow in order. This authorized deferral does not remove the T051 integration gate or
+  constitute full-feature acceptance. T056's local review is recorded below but remains partial.
+- Confirmed a clean starting master, T001–T050 complete and the 16/16 specification checklist.
+  Reviewed task definitions, spec, plan, contracts, data model, research, quickstart and Constitution.
+  No extension hooks exist. No firewall, LAN binding, certificate, production configuration,
+  dependency, authentication-handler, entity or migration changes were made.
+- T052: Added ReconnectStatus.razor, App wiring, a small local reconnect-status.js and CSS.
+  The script observes .NET 8's native reconnect CSS classes and browser offline/online events;
+  it makes app content inert, focuses the reload action and guards the three marked Admin forms.
+  The reload gate remains after reconnection, requiring a full GET reload before further edits.
+  It warns that an interrupted save may have completed; it does not retry writes or auto-submit.
+  Reviewed existing busy guards, per-operation service calls and public-menu read sequencing.
+  .NET 8 hook reference: https://learn.microsoft.com/en-us/aspnet/core/blazor/fundamentals/signalr?view=aspnetcore-8.0.
+- T052 browser checks: all three Admin forms rejected submits while offline, no new records were
+  created, and reconnect did not unlock editing until reload. Held one isolated category row while
+  an actual interactive save was in flight, disconnected the browser, allowed the save to commit,
+  then reloaded/reopened its persisted value before further edits. Public-menu recovery also passed.
+  A real validation-host shutdown triggered the native reconnect-show class; after restart the
+  reload gate stayed active until a fresh page load. No unhandled circuit exception was observed.
+  An initial in-memory diagnostic quoting error was corrected before those checks ran.
+- Preservation strategy: applied the unchanged existing migration to a uniquely named owned local
+  validation database, then copied domain rows and the two Identity accounts/roles within SQL.
+  Credential values were never printed/exported to files. All stamp/role mutations, constraint
+  attempts, race writes and tab edits were confined to this disposable copy, not CafeManagement.
+- T053: Verified HttpOnly/Secure/SameSite=Lax session cookies; generic failed login; safe external
+  returnUrl rejection; login/logout full navigation; logout GET 405; missing/invalid/mispaired HTTP
+  antiforgery rejection and an accepted correctly paired write. Controlled cloned-user stamp
+  invalidation denied protected APIs/QR and both existing circuits' service reads. Removing the
+  cloned Admin role also denied access. Restored cloned stamps/memberships before later checks.
+  Reviewed current-user lookup/null handling and the revalidating provider's 30-minute interval;
+  the timer was inspected rather than waiting 30 minutes. Immediate denial came from per-operation
+  user/stamp/role checks. Ordinary logout cleared shared HTTP cookies but an already-open circuit
+  could still read until full navigation, as documented; no instant global revocation is claimed.
+- T054: Two simultaneous case-variant table creates produced one 201 and one duplicate_table_label
+  409, with exactly one saved row. Rolled-back SQL statements verified required category FK,
+  positive price, nonblank product/category/table names and unique normalized labels/public codes.
+  Two tabs retained independent editor models; explicitly reopening read the other tab's saved
+  change. Overlapping reads produced no shared-context errors. Changed isolated category/product/
+  table values, restarted the host, and matched full ordered projection hashes afterward, including
+  prices, availability and public codes. Renaming the isolated table did not change its code.
+- T055: Restore and Debug build passed (0 warnings/errors, 10.32 seconds). Release build passed
+  (0 warnings/errors, 7.12 seconds); publish to ignored artifacts/cafe succeeded without deployment.
+  Inspected all 67 published files: no actual local passwords/connection strings or certificate/
+  database files. Published Bootstrap/site/reconnect assets matched their sources; license retained.
+  Ran that compiled Release artifact locally on original loopback ports 7128/5004 in Development.
+  Admin categories/products/tables and anonymous public deep links/refresh/reload worked; public
+  filtering/field exclusion and 401/403 boundaries remained intact. WeatherForecast returned five
+  records, Swagger worked, HTTP redirected to HTTPS, unknown APIs returned JSON 404 rather than
+  HTML, and reconnect UI was present once and hidden while connected. Output remains Git-ignored.
+- Before/after fingerprints matched for all original five tables/codes, eight categories, eight
+  products, two Identity accounts/password/security stamps/role memberships, two roles and one
+  migration. Stopped all hosts and removed only the owned disposable validation database after
+  ownership/count checks. Existing database records and the prepared external certificates were
+  untouched. No automated tests or unrelated features were added; diagnostics remained in memory.
+
+### Partial final acceptance review (T056 pending T051, 2026-10-27)
+
+- Reviewed every scenario in spec.md against recorded evidence and quickstart.md. The remaining
+  gap is physical-phone scanning/rescanning; desktop QR decoding/navigation is corroboration only.
+  No deletion/deactivation, ordering/POS/payment/report/delivery endpoint or screen was found in
+  the source/Swagger review. There is one existing solution project and no new test project.
+  Source changes are confined to the reconnect requirement; the Git baseline remains preserved.
+
+  | Coverage | Evidence/status |
+  | --- | --- |
+  | FR-001 | T024/T034/T042/T053: backend Admin checks, tokens, cookie/session review passed. |
+  | FR-002/FR-003 | T025–T035: category/product management and exact EGP persistence passed. |
+  | FR-004 | T035/T043/T052/T054: reopen/restart, failures and uncertain-save reload passed. |
+  | FR-005 | T036–T043: table management and stable authorized QR generation passed. |
+  | FR-006 | Desktop context/code continuity passed; real-phone acceptance awaits T051. |
+  | FR-007 | Anonymous menu and viewport checks passed; physical QR journey awaits T051. |
+  | FR-008 | T034/T049/T052: empty/invalid/read/save/reconnect outcomes passed. |
+  | FR-009 | Approved create/edit-only API/UI scope confirmed; no removal/deactivation. |
+  | FR-010 | T049: unavailable filtering/restoration passed for API and UI. |
+  | FR-011 | T034/T042/T049/T054: exact currency, validation and SQL constraints passed. |
+  | SC-001/004/005/006/007/008 | Relevant recorded local manual checks passed. |
+  | SC-002/SC-003 | Partial desktop evidence only; physical-phone review remains pending. |
+
+- T051 remains explicitly postponed and unchecked. T056 remains unchecked until the phone-dependent
+  acceptance gap is resolved and the final review can be completed. T052–T055 are complete; Feature
+  001 is not fully complete or accepted. No phone/network/certificate setup was resumed by this work.
 
 ## Dependencies & Execution Order
 

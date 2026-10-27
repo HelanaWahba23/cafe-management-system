@@ -719,8 +719,58 @@ staff session is needed for browsing; ordering/payment/POS services are unnecess
   scenario/mobile reviews and T051 physical-phone QR acceptance remain unperformed and unchecked;
   no full-feature acceptance is claimed. T049 and all later tasks remain outside this execution.
 
-- [ ] T049 [US3] Manually verify `CafeManagement.Api/Components/Pages/Menu/TableMenu.razor` and `Controllers/PublicMenuController.cs` signed out: two-table context, EGP precision, unavailable filtering in returned data, restore availability/changed price on next reload, empty/all-unavailable menu, malformed/unknown links and safe read failures; record outcomes here (after T048 with sample data; FR-006/007/008/010/011, SC-003/006/007/008).
-- [ ] T050 [US3] Check `CafeManagement.Api/Components/Pages/Menu/TableMenu.razor` at 360/390/1280px for readable names/prices, usable category controls, focus/keyboard access and zero horizontal page scrolling; record responsive results here without adding an automated suite (after T049; FR-007, SC-004).
+- [X] T049 [US3] Manually verify `CafeManagement.Api/Components/Pages/Menu/TableMenu.razor` and `Controllers/PublicMenuController.cs` signed out: two-table context, EGP precision, unavailable filtering in returned data, restore availability/changed price on next reload, empty/all-unavailable menu, malformed/unknown links and safe read failures; record outcomes here (after T048 with sample data; FR-006/007/008/010/011, SC-003/006/007/008).
+- [X] T050 [US3] Check `CafeManagement.Api/Components/Pages/Menu/TableMenu.razor` at 360/390/1280px for readable names/prices, usable category controls, focus/keyboard access and zero horizontal page scrolling; record responsive results here without adding an automated suite (after T049; FR-007, SC-004).
+
+### Public-menu validation evidence (T049–T050, 2026-10-27)
+
+- Confirmed T001–T048 complete, clean master tracking origin/master and specification checklist
+  16/16. Reviewed exact dependencies, approved specification/plan/contracts/data model/research,
+  quickstart and Constitution. No extension hooks exist. No application changes were necessary.
+- T049: All five existing table API projections matched their correct label/code and shared menu.
+  Compared complete JSON with Admin data: eight categories, four available products, all four
+  unavailable products absent, exact two-place EGP prices and no private/staff fields. Two-table
+  signed-out page loads, refresh/reload, category navigation and empty-category feedback passed.
+  Public pages displayed no staff shell/login preflight. Malformed/unknown codes returned safe
+  400/404 with no fallback table; unsupported public POST returned 405. Anonymous Admin/QR APIs
+  remained 401, Cashier Admin access remained 403, and existing Admin navigation still worked.
+- To preserve existing records, created a separately named owned validation database using the
+  existing migration and a process-only second loopback host. It contained only two table fixtures,
+  then one category/product fixture and no Identity accounts. Verified categories: [] for an empty
+  menu and products: [] for an all-unavailable category, with clear empty-menu/category messages.
+  Controlled SQL changes affected only that disposable product: unavailable -> available -> price
+  25.50 to 37.65 -> unavailable -> available at 25.50. Each next interactive reload and API read
+  reflected the saved visibility/price; the second table retained its distinct context/shared menu.
+  No original product/table was edited or deleted, and no local secret configuration was changed.
+- A separate process-only nonexistent database target verified generic no-store 500 ProblemDetails,
+  safe read-error/retry feedback and no stale/fabricated table or products. No SQL/credentials/stack
+  details reached the public response. Hosts used the unchanged built application, not test code.
+- T050: Measured and visually reviewed anonymous menu screenshots at all four widths below.
+  Names/prices remained readable and unclipped; product text was at least 16px. Category controls
+  wrapped within the viewport and were at least 38px high. Tab/Shift+Tab, visible Bootstrap focus
+  rings and Enter navigation to the correct table/category fragment passed at every width.
+
+  | Viewport width | Horizontal page width | Result |
+  | --- | --- | --- |
+  | 360px mobile | 360px | PASS |
+  | 390px mobile | 390px | PASS |
+  | 768px tablet | 768px | PASS |
+  | 1280px desktop | 1280px | PASS |
+
+- Corrected the diagnostic focus assertion to accept Bootstrap's visible box-shadow ring as well
+  as an outline; this was not an application defect. Desktop browser HTTPS passed without a
+  certificate bypass. Only Node-backed request diagnostics used disposable certificate overrides.
+  No automated test suite/files, dependencies, network/certificate settings or features were added.
+- Restore succeeded; dotnet build CafeManagement.sln --no-restore passed with 0 warnings and
+  0 errors (6.22 seconds). Existing WeatherForecast returned five records and Swagger remained usable.
+  Before/after fingerprints matched for all five tables/codes, eight categories, eight products,
+  two Identity accounts/password/security stamps/role memberships, two roles and one migration.
+- Stopped all validation hosts. Removed the owned disposable database after verifying its ownership
+  marker, fixture count and absence of accounts. Initial cleanup encountered the diagnostic's own
+  pooled connection; clearing that process's idle pool allowed removal without forced sessions.
+  Removed only this turn's temporary screenshots/directories. No original database reset/recreation,
+  record/account change, source modification or generated artifact belongs in this commit.
+
 
 ## Phase 6: Polish & Cross-Cutting Validation
 
@@ -728,6 +778,22 @@ staff session is needed for browsing; ordering/payment/POS services are unnecess
 No unrelated cleanup, speculative optimization or additional business features.
 
 - [ ] T051 Scan both table QR codes from a real signed-out phone using the verified reachable HTTPS origin configured through `CafeManagement.Api/Application/PublicMenuOptions.cs`; open `Components/Pages/Menu/TableMenu.razor`, rename one table using `Components/Pages/Admin/Tables.razor` and rescan its prior QR, confirming correct table/no login; record SC-002/003 outcomes or exact connectivity blockers here (after T043/T050; FR-006/007).
+
+### Physical-phone verification pending (T051, 2026-10-27)
+
+- Configured PublicWebBaseUrl is https://localhost:7128. Verified HTTPS listeners on 127.0.0.1
+  and ::1 only; a separate phone's localhost addresses that phone, not the development PC.
+  No phone-reachable trusted HTTPS origin or physical device session was available for this check.
+- Desktop-only corroboration passed: decoded two existing Admin QR PNGs, opened their distinct
+  saved URLs in a signed-out browser with trusted desktop HTTPS, and saw each correct table/menu
+  without staff controls or login. This does not substitute for a real phone scan.
+- Real-phone scans, Admin rename and phone rescan of the prior QR remain unperformed. T051 stays
+  unchecked; full SC-002/SC-003 phone acceptance is not claimed. Completing it requires an approved
+  phone-reachable trusted HTTPS origin/circuit connection and the physical scan/rescan review.
+  No firewall, bindings, certificates, tunneling, deployment or QR configuration was changed.
+- T049–T050 local validation passed. Only their completion evidence and the T051 blocker are
+  recorded here; T052 and all later tasks remain unchecked and were not executed.
+
 - [ ] T052 Add the minimal .NET 8 reconnect status UI in `CafeManagement.Api/Components/Shared/ReconnectStatus.razor` and wire it in `Components/App.razor`; review the three admin page save handlers and `Components/Pages/Menu/TableMenu.razor` for disconnect feedback, disabled/guarded submits, no automatic write replay and record reload after an uncertain save; manually interrupt/reconnect the browser and record findings (after all stories; FR-004/008).
 - [ ] T053 Review `CafeManagement.Api/Application/StaffAccess.cs`, `Infrastructure/Identity/IdentityRevalidatingAuthenticationStateProvider.cs`, `Program.cs` and account pages against `contracts/api.md`: verify API and component authorization, current-user/stamp/role checks, token rejection, cookie flags, safe redirects/errors and full-navigation identity changes; use local controlled stamp invalidation/two-tab checks without claiming ordinary logout instantly revokes every circuit (after T052; FR-001/008, SC-005/006).
 - [ ] T054 Validate SQL/data/circuit behavior through `CafeManagement.Api/Infrastructure/Persistence/CafeDbContext.cs`, entity configurations and migration: simultaneous duplicate-label requests yield one accepted write/one conflict, FK/price/name constraints hold, independent tabs do not share tracked state, and restart retains all values/codes; record manual results here without touching unrelated data (after T053; FR-004/006/011).

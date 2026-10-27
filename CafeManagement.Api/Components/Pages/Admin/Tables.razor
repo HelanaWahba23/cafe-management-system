@@ -1,0 +1,177 @@
+@page "/admin/tables"
+@attribute [Authorize(Policy = "Admin")]
+@rendermode InteractiveServer
+@layout AdminLayout
+@using System.Security.Claims
+@using CafeManagement.Api.Application
+@using CafeManagement.Api.Contracts
+@inject TableService TableManager
+@inject TableQrService Qr
+@inject AuthenticationStateProvider Authentication
+
+<PageTitle>Tables | Cafe Management</PageTitle>
+<h1>Tables</h1>
+@if (failure is not null)
+{
+    <div class="alert alert-danger" role="alert">@failure</div>
+}
+@if (notice is not null)
+{
+    <p role="status" class="text-success">@notice</p>
+}
+<button type="button" class="btn btn-outline-secondary mb-3" disabled="@(loading || saving)" @onclick="LoadAsync">Reload tables</button>
+@if (loading)
+{
+    <p role="status">Loading tables…</p>
+}
+else
+{
+    @if (tables.Length == 0)
+    {
+        <p>No tables to display.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <caption>Cafe tables</caption>
+                <thead><tr><th scope="col">ID</th><th scope="col">Label</th><th scope="col">Actions</th></tr></thead>
+                <tbody>
+                    @foreach (var table in tables)
+                    {
+                        <tr><td>@table.Id</td><td>@table.Label</td><td><button type="button" class="btn btn-outline-primary" disabled="@saving" @onclick="() => EditAsync(table.Id)" aria-label="@($"Edit table {table.Id}: {table.Label}")">Edit</button></td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    <h2>@(selected is null ? "Add table" : $"Edit table {selected.Id}")</h2>
+    <EditForm EditContext="editContext" OnSubmit="SaveAsync" FormName="table-editor">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="text-danger" />
+        <fieldset disabled="@saving" class="col-md-8 col-lg-6">
+            <legend class="visually-hidden">Table details</legend>
+            <label for="table-label" class="form-label">Label</label>
+            <InputText id="table-label" class="form-control" @bind-Value="model.Label" aria-describedby="table-label-error" />
+            <div id="table-label-error" class="text-danger"><ValidationMessage For="() => model.Label" /></div>
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                <button type="submit" class="btn btn-primary">@(saving ? "Saving…" : "Save table")</button>
+                <button type="button" class="btn btn-outline-secondary" @onclick="NewTable">New table</button>
+            </div>
+        </fieldset>
+    </EditForm>
+    @if (selected is not null)
+    {
+        <section class="mt-4" aria-labelledby="table-qr-heading">
+            <h2 id="table-qr-heading">Saved QR link for @selected.Label</h2>
+            @if (qrSource is not null)
+            {
+                <img src="@qrSource" alt="@($"Menu QR code for table {selected.Id}: {selected.Label}")" width="240" height="240" class="img-fluid border" />
+            }
+            <p class="mt-2"><a href="@selected.MenuUrl" data-enhance-nav="false">@selected.MenuUrl</a></p>
+        </section>
+    }
+}
+
+@code {
+    private TableResponse[] tables = [];
+    private TableResponse? selected;
+    private TableEditModel model = new();
+    private EditContext editContext = default!;
+    private ValidationMessageStore messages = default!;
+    private bool loading = true, saving;
+    private string? failure, notice, qrSource;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SetEditor(null);
+        await LoadAsync();
+    }
+
+    private void SetEditor(TableResponse? value)
+    {
+        selected = value;
+        qrSource = null;
+        model = new() { Label = value?.Label ?? string.Empty };
+        editContext = new(model);
+        messages = new(editContext);
+    }
+
+    private void NewTable()
+    {
+        if (saving || loading) return;
+        failure = notice = null;
+        SetEditor(null);
+    }
+
+    private async Task LoadAsync()
+    {
+        if (saving) return;
+        loading = true;
+        failure = notice = null;
+        try
+        {
+            var result = await TableManager.ListAsync((await Authentication.GetAuthenticationStateAsync()).User);
+            if (result.Error is not null) failure = result.Error.Message;
+            else tables = result.Value!;
+        }
+        finally { loading = false; }
+    }
+
+    private async Task EditAsync(int id)
+    {
+        if (saving || loading) return;
+        loading = true;
+        failure = notice = qrSource = null;
+        try
+        {
+            var principal = (await Authentication.GetAuthenticationStateAsync()).User;
+            var result = await TableManager.GetAsync(principal, id);
+            if (result.Error is not null) failure = result.Error.Message;
+            else
+            {
+                SetEditor(result.Value!);
+                await LoadQrAsync(principal);
+            }
+        }
+        finally { loading = false; }
+    }
+
+    private async Task LoadQrAsync(ClaimsPrincipal principal)
+    {
+        var result = await Qr.GetPngAsync(principal, selected!.Id);
+        if (result.Error is not null) failure = "Unable to load the saved table's QR code. Reopen the table to try again.";
+        else qrSource = $"data:image/png;base64,{Convert.ToBase64String(result.Value!)}";
+    }
+
+    private async Task SaveAsync()
+    {
+        if (saving || loading) return;
+        failure = notice = null;
+        messages.Clear();
+        if (!editContext.Validate()) return;
+        saving = true;
+        try
+        {
+            var principal = (await Authentication.GetAuthenticationStateAsync()).User;
+            var result = selected is null ? await TableManager.CreateAsync(principal, model)
+                : await TableManager.EditAsync(principal, selected.Id, model);
+            if (result.Error is not null)
+            {
+                failure = result.Error.Message;
+                if (result.Error.FieldErrors is not null)
+                    foreach (var field in result.Error.FieldErrors)
+                        messages.Add(new FieldIdentifier(model, char.ToUpperInvariant(field.Key[0]) + field.Key[1..]), field.Value);
+                editContext.NotifyValidationStateChanged();
+                return;
+            }
+            SetEditor(result.Value!);
+            notice = "Table saved.";
+            var list = await TableManager.ListAsync(principal);
+            if (list.Error is null) tables = list.Value!;
+            else failure = "The table was saved, but the list could not be refreshed. Reload tables.";
+            await LoadQrAsync(principal);
+        }
+        finally { saving = false; }
+    }
+}

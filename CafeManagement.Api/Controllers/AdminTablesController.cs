@@ -1,29 +1,15 @@
 using CafeManagement.Api.Application;
 using CafeManagement.Api.Contracts;
-using CafeManagement.Api.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace CafeManagement.Api.Controllers;
 
 [ApiController]
 [Authorize(Policy = "Admin")]
 [Route("api/admin/tables")]
-public sealed class AdminTablesController : ControllerBase
+public sealed class AdminTablesController(TableService tables, TableQrService qr) : ControllerBase
 {
-    private readonly TableService tables;
-    private readonly TableQrService qr;
-
-    // T041 introduces shared service registration with the table component. Until then,
-    // compose the API services from existing registered dependencies without changing the host.
-    public AdminTablesController(IDbContextFactory<CafeDbContext> factory, StaffAccess staff, IOptions<PublicMenuOptions> options)
-    {
-        tables = new TableService(factory, staff, options);
-        qr = new TableQrService(tables);
-    }
-
     [HttpGet]
     [ProducesResponseType(typeof(TableResponse[]), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]

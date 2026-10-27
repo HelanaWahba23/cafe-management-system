@@ -599,10 +599,61 @@ waits for US3 and T051; do not claim the customer QR journey complete before tha
 - No application defects/blockers were found. The table component, public menu destination and
   physical-phone scan journey are not implemented or claimed complete; T040 onward remain unchecked.
 
-- [ ] T040 [US2] Add `CafeManagement.Api/Components/Pages/Admin/Tables.razor` with Admin/Interactive Server, Bootstrap list/create/edit form, field conflict messages and inline authorized QR PNG/menu link preview; trusted circuit principal calls services directly, no rotation/print/download workflow (after T038; FR-001/005/006/009/011).
-- [ ] T041 [US2] Register table/QR services in `CafeManagement.Api/Program.cs`, connect the table page in `CafeManagement.Api/Components/Layout/AdminLayout.razor`, and build `CafeManagement.sln`; verify controller and component management agree on outputs/errors (after T039/T040; FR-005/006).
-- [ ] T042 [US2] Manually review `CafeManagement.Api/Components/Pages/Admin/Tables.razor` and `Controllers/AdminTablesController.cs`: distinct labels, blank/overlength/duplicate/case-space variants, label-update conflict, unknown ID, Admin-only read/write/QR access and denied CSRF writes; verify no failed change persisted (after T041; FR-001/004/005/008/011, SC-005/008).
-- [ ] T043 [US2] Generate QR images for two tables through `CafeManagement.Api/Application/TableQrService.cs`, decode/compare destinations, rename/restart/reopen and verify each code is stable and distinct with the correct table record; record the QR-management checkpoint here and leave full menu-scan acceptance to T051 (after T042; FR-004/005/006).
+- [X] T040 [US2] Add `CafeManagement.Api/Components/Pages/Admin/Tables.razor` with Admin/Interactive Server, Bootstrap list/create/edit form, field conflict messages and inline authorized QR PNG/menu link preview; trusted circuit principal calls services directly, no rotation/print/download workflow (after T038; FR-001/005/006/009/011).
+- [X] T041 [US2] Register table/QR services in `CafeManagement.Api/Program.cs`, connect the table page in `CafeManagement.Api/Components/Layout/AdminLayout.razor`, and build `CafeManagement.sln`; verify controller and component management agree on outputs/errors (after T039/T040; FR-005/006).
+- [X] T042 [US2] Manually review `CafeManagement.Api/Components/Pages/Admin/Tables.razor` and `Controllers/AdminTablesController.cs`: distinct labels, blank/overlength/duplicate/case-space variants, label-update conflict, unknown ID, Admin-only read/write/QR access and denied CSRF writes; verify no failed change persisted (after T041; FR-001/004/005/008/011, SC-005/008).
+- [X] T043 [US2] Generate QR images for two tables through `CafeManagement.Api/Application/TableQrService.cs`, decode/compare destinations, rename/restart/reopen and verify each code is stable and distinct with the correct table record; record the QR-management checkpoint here and leave full menu-scan acceptance to T051 (after T042; FR-004/005/006).
+
+### Table management checkpoint evidence (T040–T043, 2026-10-27)
+
+- Confirmed T001–T039 complete, clean master tracking origin/master and 16/16 checklist gate.
+  Reviewed the exact task dependencies and approved spec, plan, contracts, data model, research,
+  quickstart and Constitution. No extension hooks exist. Only T040–T043 were implemented.
+- T040: Added Admin-authorized Interactive Server Tables.razor with a Bootstrap list/create/edit
+  form, field/summary validation, retained input on conflicts, loading/empty/saving/error feedback
+  and guarded saves. It obtains the trusted circuit principal from AuthenticationStateProvider
+  and calls TableService/TableQrService directly. Saved records show a labelled inline PNG and
+  the trusted menu URL; unsaved text is not presented as a newly saved QR label. New-table action
+  clears the preview. No context, HTTP loopback, QR rotation, print/download or removal workflow.
+- T041: Registered both concrete services as scoped and changed AdminTablesController to inject
+  those same registrations. Existing AdminLayout Tables navigation already targets /admin/tables;
+  it now reaches the real screen, verified alongside category/product navigation. No layout edit
+  was needed. Component-generated PNG bytes matched the controller endpoint byte for byte.
+- T042: Live UI created two distinct trimmed labels, edited/reopened both and accepted a label
+  exactly 50 characters long. Blank/whitespace/51-character edits displayed validation messages.
+  Duplicate create and case/space-variant conflicting edits displayed the label conflict message,
+  retained entered values, cleared success feedback and left saved rows unchanged. Matching API
+  checks returned 400 validation and 409 duplicate_table_label/label, with no failed write persisted.
+  A valid HTTP edit matched the component record and could not assign a supplied public code.
+- Anonymous/Cashier table pages denied access without rendering the form or QR preview; list,
+  item, create, edit and QR APIs returned 401/403 respectively. Admin POST/PUT with missing or
+  invalid antiforgery returned 400. Unknown item/edit/QR IDs returned 404; nonpositive IDs returned
+  400 and DELETE returned 405. Components use the framework circuit/form protections and service
+  authorization; HTTP writes retain controller antiforgery validation. No authorization or cookie
+  handling changes were made. A 390px table-page check showed no horizontal page overflow.
+- T043: Decoded both inline service-generated PNGs to their exact configured HTTPS table URLs.
+  The two public codes/destinations were distinct. Renamed both records, fully stopped/restarted
+  the host, reopened both editors and decoded again: labels persisted, each code/URL stayed with
+  its correct table, and PNG hashes stayed byte-identical to their pre-rename values. The API
+  matched component values/PNGs after restart; direct navigation and refresh also passed.
+- Restore succeeded. Initial build caught CS0542 from an injected property named Tables matching
+  the Razor component class; renamed it TableManager. Rebuild passed with 0 warnings/0 errors
+  (6.69 seconds). EF has-pending-model-changes reported no changes. Existing category/product
+  screens/APIs, five-forecast WeatherForecast behavior and Swagger/schema remained usable.
+- Read-only before/after fingerprints preserved original tables 1–3 (including codes), all eight
+  categories/products and both Identity accounts/password/security stamps/role memberships.
+  Retained new validation tables 4–5, labelled T043 1793070665121. Final counts: five tables,
+  eight categories, eight products, two accounts, two roles and one migration. No reset, deletion,
+  new migration, dependency change or account provisioning/reset. Validation hosts were stopped.
+- Used disposable Edge sessions and in-memory diagnostics, with no automated tests/files added.
+  Corrected reused diagnostic helpers that expected product success text and a single h2; resumed
+  with the same new rows rather than creating extras. Node-backed requests used only a disposable
+  diagnostic-context certificate override; application/certificate settings were unchanged.
+  Isolated QR decoding reused the jsQR source/hash recorded under T036–T039. All affected checks
+  were completed successfully after correcting the diagnostic helpers and component name.
+- US2 table/QR-management checkpoint is complete. Public customer menu implementation and full
+  signed-out phone scan/browse acceptance remain T044 onward and T051; they are not claimed passed.
+  T044 and all later tasks remain unchecked. No ordering/POS/payment or unrelated features added.
 
 ## Phase 5: User Story 3 — Browse the Menu on a Phone (Priority: P1)
 

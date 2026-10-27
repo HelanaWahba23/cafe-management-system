@@ -3,7 +3,7 @@
 **Input**: Approved [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [API contract](contracts/api.md), [UI contract](contracts/ui.md),
 [quickstart.md](quickstart.md), requirements.md and Constitution v1.0.1.
-**Created**: 2026-10-27. **Status**: Generated for review; none executed or completed.
+**Created**: 2026-10-27. **Status**: Setup T001–T003 validated; T004–T063 not started.
 **Organization**: Setup → shared foundation → US1/US2/US3/US4 → cross-cutting validation.
 **Validation policy**: Restore/build and manual checks; no generated automated tests by default.
 Only an explicitly requested test or a concrete bug requiring diagnosis can justify an exception.
@@ -31,9 +31,9 @@ all issued table public codes remain unchanged. New persistence is additive only
 **Goal**: Establish an accurate baseline and safe implementation prerequisites without replacing
 the existing app. This phase creates no replacement scaffolding.
 
-- [ ] T001 Review `specs/002-customer-ordering/spec.md`, all six planning artifacts, `requirements.md`, `.specify/memory/constitution.md`, `CafeManagement.Api/Program.cs` and current Git diff; confirm the 16/16 quality checklist and identify existing Feature 001 edits for preservation; record baseline and Feature 001 T051/T056 pending in `specs/002-customer-ordering/tasks.md` (no prerequisites; FR-012, Constitution II/VII).
-- [ ] T002 Verify .NET 8 SDK, existing dependencies in `CafeManagement.Api/CafeManagement.Api.csproj` and `.config/dotnet-tools.json`; run `dotnet tool restore`, `dotnet restore CafeManagement.sln` and `dotnet build CafeManagement.sln --no-restore` without framework/package upgrades; record results in `specs/002-customer-ordering/tasks.md` and stop on failure (after T001; FR-012, Constitution VI).
-- [ ] T003 Confirm the existing SQL target and backup/restore readiness using local configuration referenced by `CafeManagement.Api/Program.cs`; inventory the existing migration and capture non-secret preservation fingerprints for catalog/table/QR/Identity records; establish an explicitly owned isolated validation target before mutable/race/status checks and record safe target boundaries in `specs/002-customer-ordering/tasks.md`, never print credentials or mutate original accounts (after T002; FR-012, Constitution II/IV).
+- [X] T001 Review `specs/002-customer-ordering/spec.md`, all six planning artifacts, `requirements.md`, `.specify/memory/constitution.md`, `CafeManagement.Api/Program.cs` and current Git diff; confirm the 16/16 quality checklist and identify existing Feature 001 edits for preservation; record baseline and Feature 001 T051/T056 pending in `specs/002-customer-ordering/tasks.md` (no prerequisites; FR-012, Constitution II/VII).
+- [X] T002 Verify .NET 8 SDK, existing dependencies in `CafeManagement.Api/CafeManagement.Api.csproj` and `.config/dotnet-tools.json`; run `dotnet tool restore`, `dotnet restore CafeManagement.sln` and `dotnet build CafeManagement.sln --no-restore` without framework/package upgrades; record results in `specs/002-customer-ordering/tasks.md` and stop on failure (after T001; FR-012, Constitution VI).
+- [X] T003 Confirm the existing SQL target and backup/restore readiness using local configuration referenced by `CafeManagement.Api/Program.cs`; inventory the existing migration and capture non-secret preservation fingerprints for catalog/table/QR/Identity records; establish an explicitly owned isolated validation target before mutable/race/status checks and record safe target boundaries in `specs/002-customer-ordering/tasks.md`, never print credentials or mutate original accounts (after T002; FR-012, Constitution II/IV).
 
 ## Phase 2: Foundational (T004–T016)
 
@@ -244,6 +244,63 @@ authorized validated scope and never pre-existing unrelated edits or secrets.
 
 ## Execution Evidence
 
-No implementation executed. All 63 tasks intentionally remain unchecked. Future execution
-entries should identify task IDs, files changed, actual commands/manual results, preservation
-checks and any failure/blocker, with no raw private links, credentials or customer contact data.
+### Setup prerequisite evidence (T001–T003, 2026-10-27)
+
+- T001: Started on clean master at a947581f22ab14a00b2dd61e6ffdcb44ecf25956. Reviewed the
+  approved specification, six planning artifacts, complete task/dependency list, requirements,
+  Constitution and current Program.cs. The specification-quality checklist passed 16/16 with
+  zero unchecked items. No AGENTS.md or implementation extension hooks were present. Selected
+  Feature 002 using process-only environment variables; feature.json was preserved.
+- Confirmed Feature 001 has 56 tasks, 54 completed and only T051/T056 pending. There were no
+  remaining unrelated working edits; the earlier index issue was already resolved. Feature 001
+  history and all application/source/configuration files were preserved without modification.
+- T002: Active SDK 8.0.427; installed SDKs 8.0.400/8.0.427 and ASP.NET Core/.NET runtimes
+  8.0.8/8.0.33. Existing net8.0, EF/Identity 8.0.33, QRCoder 1.8.1 and Swashbuckle 6.4.0
+  remain unchanged. Local dotnet-ef 8.0.33 tool restore and solution restore succeeded;
+  `dotnet build CafeManagement.sln --no-restore` passed with 0 warnings/0 errors (10.49 seconds).
+  C: had 2.53 GiB free; no installation, framework upgrade or package change was needed.
+  Existing ignore rules cover build outputs, artifacts, dotenv, user files and database files;
+  no ignore-file edit was necessary. No automated tests were added or executed.
+- T003: Safely read existing local configuration without printing credentials. Confirmed
+  localhost\MSSQLSERVER01 / CafeManagement with Windows integrated authentication, SQL Server
+  Developer Edition and local backup/restore permissions. Original allocated size was 16 MiB;
+  SQL data/backup volume D: had 63.19 GiB free. Existing migration inventory contains only
+  20261027013745_InitialMenuAndIdentity (EF 8.0.33). No new schema/migration was generated/applied.
+- Created a new COPY_ONLY backup with CHECKSUM in the SQL instance's existing backup directory:
+  `D:\programming applications\MSSQL16.MSSQLSERVER01\MSSQL\Backup\CafeManagement_F002_Validation_20261027_134110_c57ad692.bak`.
+  Verified header source/copy-only/checksum flags and RESTORE VERIFYONLY WITH CHECKSUM. No
+  existing backup file was overwritten. Retain this local backup outside Git; it contains
+  database/account data and must never be added to the repository or shared as documentation.
+- Successfully restored that backup as the new isolated database
+  `CafeManagement_F002_Validation_20261027_134110_c57ad692`, using new uniquely named data/log
+  files in the instance's existing DATA directory. No REPLACE, source restore/reset, migration
+  rewrite or account provisioning occurred. Marked the copy with database extended properties:
+  CodexValidationOwner = its exact database name; CodexFeature = 002-customer-ordering:T003.
+  Re-read the ownership marker and compared all 11 table fingerprints after the actual restore.
+- Preservation method: per-table row counts and SHA-256 of stable-primary-key-ordered full-row
+  SQL JSON, including nulls, with an explicit empty-array representation for empty tables.
+  Password hashes/security stamps stayed inside SQL; only aggregate digests were returned.
+  Original before/after and restored-copy results matched for every table: five cafe tables/QR
+  codes, eight categories, eight products, two users, two roles, two user-role memberships,
+  one migration and four empty Identity support tables.
+
+  | Original table | Rows | Before/after/copy SHA-256 |
+  | --- | --- | --- |
+  | CafeTables | 5 | 0DA7E8CAB47B28BEA6CC822E38EF309D022CA75C09DBF79D5DFCCFCE835318D3 |
+  | MenuCategories | 8 | FE37F409DD7C7872008B135F18E62D7D36A2576DD9DE528601F4E156093165FD |
+  | Products | 8 | 4988206FBFECB7205C8E3CC7D72047B290E937B1E7AB761699523110B32B2EA5 |
+  | AspNetUsers | 2 | AAF70956B919344A9A52A800697749BB4A1F631345FB5A6C63AC56F8F0117163 |
+  | AspNetRoles | 2 | 6586ED98851F4859A5B17F7ADBD0BC8917972C7B790C74110E694A21B031BF66 |
+  | AspNetUserRoles | 2 | 4BC01AA4DB803E0CCBCB8173CF97B06E8171AFD7E83E7A015E5CDF602055D839 |
+  | __EFMigrationsHistory | 1 | 1886095F52DA074825BCE2D7A2137BDD50D1125E093C3A623F1D351830F02248 |
+
+- Later mutable/race/status checks must explicitly target the owned validation copy through
+  process-only connection overrides, after verifying its marker. The application's existing
+  user secrets/default connection still target CafeManagement and were not changed. No new
+  host was started. Do not run mutable acceptance checks against the original, recreate it,
+  overwrite unrelated databases, or delete this owned copy/backup without scoped authorization.
+- Corrected in-memory diagnostic helper issues (PowerShell property access and a reserved SQL
+  alias) before preparation; these were not application defects and required no source/test files.
+  All readiness/restore/preservation checks subsequently passed. Only this task document changes.
+- T001–T003 are complete. T004–T063 remain unchecked and were not started. No ordering, POS,
+  payments, delivery, new entities, code, migrations, certificates or network changes were made.

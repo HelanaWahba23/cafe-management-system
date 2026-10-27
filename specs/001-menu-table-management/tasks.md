@@ -252,11 +252,69 @@ management and public browsing, so their shared schema belongs here rather than 
   files and build artifacts remain outside the commit; only reviewed source/migrations/task evidence
   are intended for Git. T016 onward remains unstarted.
 
-- [ ] T016 [P] Add `CafeManagement.Api/Controllers/AuthController.cs` with authenticated GET `/api/auth/me` returning email/roles and no-store GET `/api/auth/antiforgery` returning requestToken plus framework cookie; configure RequestVerificationToken consistently and keep authentication cookie HttpOnly; no public registration or JSON login endpoint (after T010; `contracts/api.md` session contract).
-- [ ] T017 [P] Add `CafeManagement.Api/Pages/Account/Login.cshtml` and `Login.cshtml.cs` for ordinary HTTP GET/POST email/password login with antiforgery, generic credential/lockout failure, safe local returnUrl and full redirect after SignInManager cookie issuance; use Admin default `/admin/categories`, authenticated non-admin denial, and no client role selector/registration (after T013; FR-001).
-- [ ] T018 [P] Add `CafeManagement.Api/Pages/Account/Logout.cshtml` and `Logout.cshtml.cs` for authenticated antiforgery-protected POST logout with cleared cookie and full redirect to login; forbid GET sign-out and do not perform cookie mutations from interactive handlers (after T013; FR-001).
-- [ ] T019 [P] Add `CafeManagement.Api/Components/App.razor`, `Routes.razor`, `_Imports.razor` and `Layout/AdminLayout.razor` with local Bootstrap assets, .NET 8 component routing/cascading authentication, staff navigation and HTTP logout form; keep public routes outside Admin enforcement and leave account pages outside interactive rendering (after T004/T015/T017/T018; FR-001/007).
-- [ ] T020 Integrate the host additively in `CafeManagement.Api/Program.cs`: Razor Pages, Razor components/Interactive Server, revalidating auth state, concrete staff/options services, static files, Identity cookie options and Admin policy; authentication then authorization then antiforgery; map controllers/pages/components without swallowing `/api/*`, existing `/WeatherForecast` or Swagger, and return 401/403 for APIs rather than HTML redirects (after T014–T019; FR-001/007/008).
+- [X] T016 [P] Add `CafeManagement.Api/Controllers/AuthController.cs` with authenticated GET `/api/auth/me` returning email/roles and no-store GET `/api/auth/antiforgery` returning requestToken plus framework cookie; configure RequestVerificationToken consistently and keep authentication cookie HttpOnly; no public registration or JSON login endpoint (after T010; `contracts/api.md` session contract).
+- [X] T017 [P] Add `CafeManagement.Api/Pages/Account/Login.cshtml` and `Login.cshtml.cs` for ordinary HTTP GET/POST email/password login with antiforgery, generic credential/lockout failure, safe local returnUrl and full redirect after SignInManager cookie issuance; use Admin default `/admin/categories`, authenticated non-admin denial, and no client role selector/registration (after T013; FR-001).
+- [X] T018 [P] Add `CafeManagement.Api/Pages/Account/Logout.cshtml` and `Logout.cshtml.cs` for authenticated antiforgery-protected POST logout with cleared cookie and full redirect to login; forbid GET sign-out and do not perform cookie mutations from interactive handlers (after T013; FR-001).
+- [X] T019 [P] Add `CafeManagement.Api/Components/App.razor`, `Routes.razor`, `_Imports.razor` and `Layout/AdminLayout.razor` with local Bootstrap assets, .NET 8 component routing/cascading authentication, staff navigation and HTTP logout form; keep public routes outside Admin enforcement and leave account pages outside interactive rendering (after T004/T015/T017/T018; FR-001/007).
+- [X] T020 Integrate the host additively in `CafeManagement.Api/Program.cs`: Razor Pages, Razor components/Interactive Server, revalidating auth state, concrete staff/options services, static files, Identity cookie options and Admin policy; authentication then authorization then antiforgery; map controllers/pages/components without swallowing `/api/*`, existing `/WeatherForecast` or Swagger, and return 401/403 for APIs rather than HTML redirects (after T014–T019; FR-001/007/008).
+
+### HTTP accounts and Blazor host evidence (T016–T020, 2026-10-27)
+
+- Verified T001–T015 complete, clean starting Git state and 16/16 passing quality checklist.
+  Reviewed exact tasks/dependencies and approved specification, plan, research, model, contracts,
+  quickstart and Constitution. No extension hook file exists.
+- T016: Added GET /api/auth/me (authenticated email/current roles) and anonymous/staff GET
+  /api/auth/antiforgery (framework cookie/request token); both use no-store responses. Header
+  RequestVerificationToken is configured consistently. No registration or JSON login API exists.
+- T017: Added ordinary HTTP Razor Page login with automatic Razor Pages antiforgery validation,
+  email/password fields, generic credential/lockout failure and full-navigation cookie issuance.
+  Valid Admin redirects to a local returnUrl or /admin/categories; an external returnUrl was
+  rejected in favor of the default. Cashier authenticates then receives a 403 access-denied view
+  on the same HTTP page, with sign-out; no dashboard or role selector was introduced.
+- T018: Added authenticated POST logout with Razor Pages antiforgery validation and full redirect
+  to /account/login. Authenticated GET logout returns 405. Missing POST token returns 400 and
+  leaves the session authenticated; a valid fresh RequestVerificationToken permits logout and
+  subsequent /api/auth/me returns 401. Account pages do not load Blazor/enhance their HTTP forms.
+- T019: Added App/Routes/_Imports and AdminLayout with local Bootstrap/site CSS, framework
+  Blazor script, AuthorizeRouteView, staff navigation/session identity and an AntiforgeryToken
+  HTTP logout form. Public routes are not placed under an Admin default policy/layout. Account
+  pages remain Razor Pages. Future routable screens select their approved Interactive Server
+  mode/layout in their story tasks; no temporary home/admin/menu screen or validation route was
+  created. /admin/categories is intentionally not implemented until its later story task.
+- T020: Added .NET 8 Razor Pages and Razor components/Interactive Server registration, cascading
+  auth, the scoped revalidating provider and StaffAccess, bound options, Admin policy and static
+  serving. Authentication precedes authorization and antiforgery; controllers/pages/components
+  retain separate endpoint mapping, with no blanket HTML fallback. Identity cookie is HttpOnly,
+  Secure, SameSite=Lax and nonpersistent; API login/access-denied events return 401/403 without
+  redirect. Existing factory/Identity stores, operator bootstrap and sample API remain intact.
+  Configured PublicWebBaseUrl=https://localhost:7128 only in local user secrets; this is desktop
+  development configuration and does not claim phone reachability. Invalid HTTP origin supplied
+  by a temporary process override failed startup with OptionsValidationException as intended.
+- dotnet restore CafeManagement.sln passed; dotnet build CafeManagement.sln --no-restore passed
+  with 0 warnings and 0 errors (5.20 seconds). Model/snapshot check reports no pending changes.
+  Actual host services resolve StaffAccess and IdentityRevalidatingAuthenticationStateProvider;
+  Admin policy allows Admin/denies Cashier. Its API forbidden cookie event returns 403 without
+  Location. A live anonymous /api/auth/me request returned 401 without redirect.
+- Focused HTTP checks using existing accounts passed for both roles: valid login, generic invalid
+  credentials, rejected missing login CSRF, current session email/roles, no-store token/session
+  responses, secure session-cookie flags, GET logout rejection, rejected missing logout CSRF,
+  valid header-token logout and cleared session. The invalid-credentials check used Admin once
+  per run followed by valid login; no account lockout was triggered. No credentials were printed.
+- Bootstrap CSS, site CSS and /_framework/blazor.web.js returned 200; /_blazor/negotiate exposed
+  Interactive Server transports. Unknown /api route returned 404 without component HTML.
+  WeatherForecast returned five records; Swagger UI/OpenAPI remained available over HTTPS with
+  normal certificate validation. Validation web host stopped. Component shell compilation and
+  transport readiness are verified; actual management/menu rendering and connected-circuit
+  authorization remain later feature checks, not claimed complete here.
+- Read-only before/after metadata/account fingerprints matched: schema/table/migration counts,
+  account/role/membership counts, password hashes and security stamps unchanged. No database
+  reset/recreation, migrations, provisioning, account reset, new dependencies or test files.
+  Diagnostic-command fixes handled expected redirects, JSON arrays and empty-header values in
+  PowerShell; no application defect was hidden by those command corrections.
+- Only T001–T020 are complete. T021 onward remains unstarted; shared API errors (T021), account
+  presentation refinement (T022) and their complete integration checkpoints remain later work.
+  Credentials/local settings/build artifacts are excluded from the reviewed source commit.
+
 - [ ] T021 Define only the minimal shared service failure/field-error shape in `CafeManagement.Api/Application/OperationError.cs` and HTTP mapping in `CafeManagement.Api/Contracts/ApiErrors.cs`, wiring safe ProblemDetails/validation responses in `CafeManagement.Api/Program.cs`; cover denied/not-found/invalid/conflict and generic 500 without secret disclosure, not a generic application framework (after T020; FR-001/004/008/011).
 - [ ] T022 Finish accessible Bootstrap HTTP account presentation in `CafeManagement.Api/Pages/_ViewImports.cshtml`, `Pages/Account/Login.cshtml` and `Pages/Account/Logout.cshtml`; ensure full form posts include antiforgery and no enhanced same-circuit cookie interception, with readable errors and keyboard labels (after T017–T020; FR-001).
 - [ ] T023 Build `CafeManagement.sln`, run its existing HTTPS profile from `CafeManagement.Api/Properties/launchSettings.json` and verify Swagger, `/WeatherForecast`, static CSS, HTTP account pages and component host coexist without runtime DI/options/route errors; record any real failure before adding feature services (after T021/T022; Constitution II/VI).

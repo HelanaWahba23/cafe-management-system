@@ -1,0 +1,23 @@
+@inherits LayoutComponentBase
+
+<AuthorizeView Roles="Admin" Context="staff">
+    <Authorized>
+        <header class="border-bottom">
+            <nav class="container d-flex flex-wrap align-items-center gap-3 py-3" aria-label="Staff navigation">
+                <span class="fw-bold">Cafe Management</span>
+                <NavLink href="/admin/categories">Categories</NavLink>
+                <NavLink href="/admin/products">Products</NavLink>
+                <NavLink href="/admin/tables">Tables</NavLink>
+                <span class="ms-md-auto">@staff.User.Identity?.Name</span>
+                <form method="post" action="/account/logout" data-enhance="false">
+                    <AntiforgeryToken />
+                    <button type="submit" class="btn btn-outline-secondary">Sign out</button>
+                </form>
+            </nav>
+        </header>
+        <main class="container py-4">@Body</main>
+    </Authorized>
+    <NotAuthorized>
+        <main class="container py-4"><h1>Administrator access required</h1></main>
+    </NotAuthorized>
+</AuthorizeView>

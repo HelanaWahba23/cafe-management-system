@@ -1,0 +1,24 @@
+<Router AppAssembly="typeof(App).Assembly">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="routeData">
+            <NotAuthorized Context="authentication">
+                <main class="container py-4">
+                    @if (authentication.User.Identity?.IsAuthenticated == true)
+                    {
+                        <h1>Access denied</h1>
+                        <p>Administrator access is required.</p>
+                    }
+                    else
+                    {
+                        <h1>Staff sign in required</h1>
+                        <a href="/account/login" data-enhance-nav="false">Sign in</a>
+                    }
+                </main>
+            </NotAuthorized>
+        </AuthorizeRouteView>
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <main class="container py-4"><h1>Page not found</h1></main>
+    </NotFound>
+</Router>

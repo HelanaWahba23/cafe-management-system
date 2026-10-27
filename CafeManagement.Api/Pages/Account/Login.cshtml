@@ -1,0 +1,44 @@
+@page "/account/login"
+@model CafeManagement.Api.Pages.Account.LoginModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{ Layout = null; }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Staff sign in | Cafe Management</title>
+    <link rel="stylesheet" href="/lib/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+<main class="container py-4">
+    @if (Model.AccessDenied)
+    {
+        <h1>Access denied</h1>
+        <p>Your account does not have access to menu and table management.</p>
+        <form method="post" action="/account/logout" data-enhance="false">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-outline-secondary">Sign out</button>
+        </form>
+    }
+    else
+    {
+        <h1>Staff sign in</h1>
+        <form method="post" data-enhance="false" class="col-md-6 col-lg-4">
+            <input type="hidden" asp-for="ReturnUrl" />
+            <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+            <div class="mb-3">
+                <label asp-for="Input.Email" class="form-label"></label>
+                <input asp-for="Input.Email" class="form-control" autocomplete="username" />
+            </div>
+            <div class="mb-3">
+                <label asp-for="Input.Password" class="form-label"></label>
+                <input asp-for="Input.Password" class="form-control" autocomplete="current-password" />
+            </div>
+            <button type="submit" class="btn btn-primary">Sign in</button>
+        </form>
+    }
+</main>
+</body>
+</html>

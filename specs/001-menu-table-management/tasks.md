@@ -383,11 +383,56 @@ still be validated against real story endpoints/components in their subsequent c
 **Independent verification**: Two categories and two products can be saved, edited and reopened,
 including unavailable Admin-visible products; no tables, customer ordering or payments needed.
 
-- [ ] T025 [P] [US1] Define category request/response and editable view models in `CafeManagement.Api/Contracts/CategoryContracts.cs`: "enforce name length 1–120" after trim, "reject whitespace-only input" and "name duplicates allowed"; no editable ID/deactivation fields (after T024; FR-002/009/011).
-- [ ] T026 [P] [US1] Define product request/response and editable view models in `CafeManagement.Api/Contracts/ProductContracts.cs`: required existing CategoryId, "enforce name length 1–120", duplicate names allowed, explicit IsAvailable, price "greater than zero", "at most two fractional digits" and "at most 9999999999999999.99"; HTTP price invariant string, service/UI decimal and response currency EGP/two places, no silent rounding (after T024; FR-003/010/011).
-- [ ] T027 [US1] Implement category create/list/get/edit in `CafeManagement.Api/Application/MenuService.cs` using StaffAccess on every operation, per-operation disposed factory context, DTO projections/trim/whitespace validation and persisted duplicate-name allowance; no delete/deactivate methods (after T025/T021; FR-001/002/004/009/011).
-- [ ] T028 [US1] Extend `CafeManagement.Api/Application/MenuService.cs` for product create/list/get/edit including unavailable products, required category FK validation, exact decimal scale/range and availability changes; validate before SaveChanges, preserve atomicity and map missing category/record and failure outcomes without partial changes (after T026/T027; FR-001/003/004/010/011).
-- [ ] T029 [P] [US1] Add `CafeManagement.Api/Controllers/AdminCategoriesController.cs` with Admin-authorized GET list/item, POST and PUT routes under `/api/admin/categories`, explicit unsafe-request antiforgery, documented DTOs/statuses/Location and shared service mapping; no entity binding/removal endpoints (after T027; FR-001/002/004/009).
+- [X] T025 [P] [US1] Define category request/response and editable view models in `CafeManagement.Api/Contracts/CategoryContracts.cs`: "enforce name length 1–120" after trim, "reject whitespace-only input" and "name duplicates allowed"; no editable ID/deactivation fields (after T024; FR-002/009/011).
+- [X] T026 [P] [US1] Define product request/response and editable view models in `CafeManagement.Api/Contracts/ProductContracts.cs`: required existing CategoryId, "enforce name length 1–120", duplicate names allowed, explicit IsAvailable, price "greater than zero", "at most two fractional digits" and "at most 9999999999999999.99"; HTTP price invariant string, service/UI decimal and response currency EGP/two places, no silent rounding (after T024; FR-003/010/011).
+- [X] T027 [US1] Implement category create/list/get/edit in `CafeManagement.Api/Application/MenuService.cs` using StaffAccess on every operation, per-operation disposed factory context, DTO projections/trim/whitespace validation and persisted duplicate-name allowance; no delete/deactivate methods (after T025/T021; FR-001/002/004/009/011).
+- [X] T028 [US1] Extend `CafeManagement.Api/Application/MenuService.cs` for product create/list/get/edit including unavailable products, required category FK validation, exact decimal scale/range and availability changes; validate before SaveChanges, preserve atomicity and map missing category/record and failure outcomes without partial changes (after T026/T027; FR-001/003/004/010/011).
+- [X] T029 [P] [US1] Add `CafeManagement.Api/Controllers/AdminCategoriesController.cs` with Admin-authorized GET list/item, POST and PUT routes under `/api/admin/categories`, explicit unsafe-request antiforgery, documented DTOs/statuses/Location and shared service mapping; no entity binding/removal endpoints (after T027; FR-001/002/004/009).
+
+### Menu contracts/service/category API evidence (T025–T029, 2026-10-27)
+
+- Confirmed T001–T024 complete, clean starting tree and 16/16 passing quality checklist;
+  reviewed exact dependencies and approved specification, plan, research, model, contracts,
+  quickstart and Constitution. No extension hook file exists.
+- T025: Added category HTTP input/edit model and response DTO with trimmed 1–120 character,
+  nonblank validation; no editable ID or deactivation field. Duplicate names remain allowed.
+- T026: Added separate HTTP product input, decimal edit model/details and invariant string-price
+  response mapping with fixed EGP/two-place output. Availability/category/price must be supplied;
+  names are nonblank/trimmed/max120. HTTP price accepts digits and up to two fractional digits,
+  no sign/grouping/exponent; decimal values must be positive, scale <=2 and <=9999999999999999.99.
+  Rejected excess scale (including trailing-zero scale three) without rounding. Wire checks
+  accepted 25.50/the maximum and rejected zero/negative/exponent/group/sign/excess-scale/overflow.
+- T027–T028: MenuService checks StaffAccess on every category/product read/write, creates and
+  asynchronously disposes one factory context per operation, projects DTOs and allows duplicate
+  names. Product admin reads include unavailable records. Missing addressed record maps to
+  NotFound; missing category/invalid input maps to field validation; unexpected authorization/
+  persistence failures return a safe OperationError. Each accepted mutation uses one SaveChanges;
+  rejected edits do not save or partially change a record. No deletion/deactivation methods.
+- T029: Added Admin-policy category list/item/create/edit controller with explicit POST/PUT
+  antiforgery, DTO/status documentation, 201 Location and shared error mapping. No entity input
+  binding/removal route. The controller constructs the shared concrete service from the existing
+  factory/StaffAccess registrations so this task is functional without prematurely executing
+  T033's shared MenuService registration; Program.cs remains unchanged.
+- Restore passed; final solution build passed with 0 warnings/0 errors (2.29 seconds). EF reports
+  no pending model/snapshot changes. No migration or dependency/configuration change occurred.
+- HTTPS category checks passed: anonymous 401; Cashier GET/POST 403; missing/invalid CSRF 400;
+  Admin create 201 with Location, trimming, independent duplicate names, edit/re-read, blank/
+  overlong rejected edits preserving saved values, nonpositive ID 400/missing ID 404, DELETE 405
+  and Swagger category routes. Existing accounts were used without resetting/provisioning.
+- Actual host service checks using server-generated Identity principals passed product create,
+  duplicate names, trim, availability/price edits, new-context persistence, unavailable admin list,
+  missing product/category outcomes, absent availability and price scale/range rejection.
+  Re-reading after rejected edits preserved category/price/availability. All eight service
+  operations rejected anonymous/Cashier callers. Product response formatted 25.60 with EGP.
+- Validation created only new labelled samples: categories 1/2 (T029) and category 3 (T028),
+  products 1/2. Samples are retained; no existing records were edited/deleted. After stopping
+  the web host, read-only SQL confirmed three categories/two products persisted, with two
+  existing accounts/two roles/one migration unchanged. No database reset or cleanup was performed.
+- Reviewed diff/secret exclusions. Only the selected contracts/service/controller/task evidence
+  changed; existing auth, entities, mappings, migrations, components and host remain intact.
+  No automated test files, product endpoints, UI screens, POS/orders/payments/reports or tasks
+  beyond T029. T030 onward remains unstarted; full component/controller integration is later work.
+
 - [ ] T030 [P] [US1] Add `CafeManagement.Api/Controllers/AdminProductsController.cs` with the approved GET list/item, POST and PUT `/api/admin/products` contract, Admin policy/unsafe-request antiforgery and invariant price DTO mapping, showing all products only to Admin (after T028; FR-001/003/004/010/011).
 - [ ] T031 [P] [US1] Add `CafeManagement.Api/Components/Pages/Admin/Categories.razor` with Admin route authorization, Interactive Server, Bootstrap list/Add/Edit EditForm, field errors and loading/empty/saving states; obtain trusted principal from AuthenticationStateProvider and call MenuService directly (after T027; FR-001/002/004/007).
 - [ ] T032 [P] [US1] Add `CafeManagement.Api/Components/Pages/Admin/Products.razor` with Admin/Interactive Server, all-product list and form for name/category/decimal EGP price/availability, IDs distinguishing duplicate category names, retained input on failure and duplicate-submit prevention; no circuit-retained context or loopback HTTP (after T028; FR-001/003/004/010/011).

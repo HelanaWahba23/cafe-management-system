@@ -147,11 +147,55 @@ or account bootstrap until the target database and local secrets have been verif
 **Critical**: All stories require the T024 foundation checkpoint. Domain records serve both admin
 management and public browsing, so their shared schema belongs here rather than duplicated per story.
 
-- [ ] T006 [P] Create `CafeManagement.Api/Domain/MenuCategory.cs` with "Id int identity PK; Name nvarchar(120) required" and "One category has zero or more products; name duplicates allowed" from `data-model.md`; keep it free of deletion/deactivation fields (after Phase 1; FR-002/009/011).
-- [ ] T007 Create `CafeManagement.Api/Domain/Product.cs` with "Id int identity PK; CategoryId int required; Name nvarchar(120) required; Price decimal(18,2) required; IsAvailable bit required", the required category relation, "product name duplicates allowed" and "CHECK Price > 0"; do not invent an availability default or currency table (after T006; FR-003/009/010/011).
-- [ ] T008 [P] Create `CafeManagement.Api/Domain/CafeTable.cs` with "Id int identity PK; Label nvarchar(50) required; NormalizedLabel nvarchar(50) required; PublicCode uniqueidentifier required"; preserve one immutable unique PublicCode per table and no menu ownership/deactivation fields (after Phase 1; FR-005/006/009/011).
-- [ ] T009 Map entities in `CafeManagement.Api/Infrastructure/Persistence/Configurations/MenuCategoryConfiguration.cs`, `ProductConfiguration.cs` and `CafeTableConfiguration.cs`: "SQL columns are NOT NULL with nonempty-after-space-trim checks", "No unique index on category/product names", "CategoryId FK -> MenuCategory.Id, index on FK, delete restricted", "CHECK Price > 0", and "Unique index on NormalizedLabel (binary comparison) and unique index on PublicCode"; inspect the mapping for every required/max-length/precision constraint (after T006–T008; FR-004/011).
-- [ ] T010 Add `CafeManagement.Api/Infrastructure/Persistence/CafeDbContext.cs` derived from IdentityDbContext and additive registration in `CafeManagement.Api/Program.cs`: register one SQL Server IDbContextFactory consistently with HTTP-scoped Identity stores, Admin/Cashier roles and Identity cookie services; verify DI options do not conflict and factory-created contexts can be disposed per operation (after T009; FR-001/004).
+- [X] T006 [P] Create `CafeManagement.Api/Domain/MenuCategory.cs` with "Id int identity PK; Name nvarchar(120) required" and "One category has zero or more products; name duplicates allowed" from `data-model.md`; keep it free of deletion/deactivation fields (after Phase 1; FR-002/009/011).
+- [X] T007 Create `CafeManagement.Api/Domain/Product.cs` with "Id int identity PK; CategoryId int required; Name nvarchar(120) required; Price decimal(18,2) required; IsAvailable bit required", the required category relation, "product name duplicates allowed" and "CHECK Price > 0"; do not invent an availability default or currency table (after T006; FR-003/009/010/011).
+- [X] T008 [P] Create `CafeManagement.Api/Domain/CafeTable.cs` with "Id int identity PK; Label nvarchar(50) required; NormalizedLabel nvarchar(50) required; PublicCode uniqueidentifier required"; preserve one immutable unique PublicCode per table and no menu ownership/deactivation fields (after Phase 1; FR-005/006/009/011).
+- [X] T009 Map entities in `CafeManagement.Api/Infrastructure/Persistence/Configurations/MenuCategoryConfiguration.cs`, `ProductConfiguration.cs` and `CafeTableConfiguration.cs`: "SQL columns are NOT NULL with nonempty-after-space-trim checks", "No unique index on category/product names", "CategoryId FK -> MenuCategory.Id, index on FK, delete restricted", "CHECK Price > 0", and "Unique index on NormalizedLabel (binary comparison) and unique index on PublicCode"; inspect the mapping for every required/max-length/precision constraint (after T006–T008; FR-004/011).
+- [X] T010 Add `CafeManagement.Api/Infrastructure/Persistence/CafeDbContext.cs` derived from IdentityDbContext and additive registration in `CafeManagement.Api/Program.cs`: register one SQL Server IDbContextFactory consistently with HTTP-scoped Identity stores, Admin/Cashier roles and Identity cookie services; verify DI options do not conflict and factory-created contexts can be disposed per operation (after T009; FR-001/004).
+
+### Foundation execution evidence (T006–T010, 2026-10-27)
+
+- Confirmed T001–T005 complete and the starting working tree clean; specification-quality
+  checklist remains 16/16. Reviewed exact task dependencies, approved specification, plan,
+  research, data model, API/UI contracts, quickstart and Constitution. No extension hooks exist.
+- T006–T008: Added only MenuCategory, Product and CafeTable. Categories have a product collection;
+  products have the required category FK/navigation, decimal price and explicitly required
+  availability input (no SQL/business availability default). Names and labels are required C#
+  properties. New tables receive distinct nonempty random GUID public codes with private setters;
+  EF marks persisted PublicCode read-only (AfterSaveBehavior.Throw), so label edits cannot rotate it.
+  No deletion/deactivation, order/payment/POS/reporting fields or currency table were introduced.
+- T009: Inspected SQL Server DDL generated entirely offline by dotnet ef dbcontext script
+  --project CafeManagement.Api --no-build. Confirmed int identity keys, nvarchar(120) names,
+  nvarchar(50) label/normalized label, required columns, decimal(18,2), bit availability,
+  nonblank-after-space-trim checks, Price > 0, CategoryId indexed FK with ON DELETE NO ACTION,
+  unique normalized-label index using Latin1_General_100_BIN2 and unique public-code index.
+  Category/product names have no unique index. No availability default or stored QR image.
+  This command inspected the model only: no migration files, database connection or SQL execution.
+  Application trimming/Unicode whitespace checks and collision/conflict handling remain later tasks.
+- T010: CafeDbContext derives from IdentityDbContext, retains base Identity mappings and applies
+  the three entity configurations. Added one AddDbContextFactory registration using the external
+  ConnectionStrings:CafeDatabase key, plus IdentityUser/IdentityRole EF stores and cookie services.
+  Identity roles can be managed through RoleManager; actual Admin/Cashier provisioning remains T013.
+  No separate AddDbContext/options registration conflicts with the singleton factory; Identity
+  HTTP stores resolve the scoped context supplied by AddDbContextFactory. No connection fallback,
+  credentials, account bootstrap, migrations or startup database writes were added.
+- Restore succeeded; dotnet build CafeManagement.sln --no-restore succeeded with 0 warnings and
+  0 errors (2.66 seconds), using the existing net8.0 project and dependencies. dotnet ef dbcontext
+  info --project CafeManagement.Api --no-build constructed the SQL Server context via the actual
+  application host without database configuration or access.
+- Lightweight in-memory inspection used EF Design's existing AppServiceProviderFactory to obtain
+  the actual host provider. Verified UserManager/RoleManager/SignInManager resolution, independent
+  factory contexts, one scoped context reused within a scope and different contexts across scopes.
+  Disposed one factory context and confirmed the other remained usable. No test files/projects,
+  database operations or alternate application registrations were introduced for this check.
+- Started the existing HTTPS Development profile; WeatherForecast returned HTTP 200/five forecasts,
+  Swagger UI returned 200 and its OpenAPI document retained WeatherForecast. Normal certificate
+  validation passed without bypass; validation host stopped. Existing middleware/routes/sample
+  code/configuration remain intact apart from the required additive service registrations.
+- Only T001–T010 are complete. Stop before T011: no migration/snapshot generation, schema changes,
+  database writes, role/account creation, login pages or Blazor UI implementation occurred.
+  Live SQL constraint enforcement and full authentication/circuit behavior remain later checks.
+
 - [ ] T011 Generate and inspect the initial migration named `InitialMenuAndIdentity` and `CafeDbContextModelSnapshot.cs` in `CafeManagement.Api/Infrastructure/Persistence/Migrations/`; use the pinned tool, review SQL/Down migration against `data-model.md`, and verify only Identity plus the three domain tables and required constraints are introduced (after T010; FR-004/011).
 - [ ] T012 Confirm the dedicated CafeManagement database target and connection secrets, then apply the reviewed migration from `CafeManagement.Api/Infrastructure/Persistence/Migrations/` using the commands in `specs/001-menu-table-management/quickstart.md`; verify tables/indexes/FK/checks and record the verified target here without credentials; do not drop/change an unrelated database or auto-migrate normal startup (after T011; Constitution IV).
 - [ ] T013 Add operator-only `--bootstrap-user` handling in `CafeManagement.Api/Infrastructure/Identity/IdentityBootstrapper.cs` and `CafeManagement.Api/Program.cs`; use secret Bootstrap options, UserManager password hashing and role services to create only missing roles/supplied account, exit afterward, never reset/promote existing users silently, then provision local Admin and a separate Cashier for access checks (after T012; FR-001).

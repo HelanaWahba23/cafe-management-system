@@ -34,6 +34,34 @@ key separators are double underscores, e.g. ConnectionStrings__CafeDatabase. Use
 for the first account; a separate operator-provisioned Cashier may validate denied admin access.
 Do not put actual credentials into saved commands, HTTP examples, screenshots or committed files.
 
+### Setup phase configuration contract (T003)
+
+The project now has a UserSecretsId, which identifies a local development secret store; it is
+not a credential. No secret values are included in the repository or provisioned by setup.
+Use `--project CafeManagement.Api` with `dotnet user-secrets` commands, or provide the process
+environment keys below through your local secret tooling. Avoid saving real values in scripts
+or shell history. User secrets are a development convenience, not an encrypted production vault.
+
+| Configuration key | Environment key | Intended consumer |
+| --- | --- | --- |
+| ConnectionStrings:CafeDatabase | ConnectionStrings__CafeDatabase | Framework connection-string configuration; SQL registration in T010. |
+| PublicWebBaseUrl | PublicWebBaseUrl | PublicMenuOptions bound from root server configuration. |
+| Bootstrap:Email | Bootstrap__Email | BootstrapOptions, only for the explicit operator command. |
+| Bootstrap:Password | Bootstrap__Password | BootstrapOptions; Identity enforces password policy when provisioning. |
+| Bootstrap:Role | Bootstrap__Role | BootstrapOptions; Admin or Cashier, with no implicit role default. |
+
+PublicWebBaseUrl must be an operator-controlled absolute HTTPS origin, optionally including a
+port and trailing slash, without embedded credentials, an application path, query or fragment.
+For desktop-only development the existing origin is `https://localhost:7128`; this does not
+provide phone reachability. Never derive the QR origin from a request Host header. Structural
+validation cannot prove operator trust, DNS reachability or certificate trust on a phone.
+
+The options classes and validation are defined in T003. Binding/startup validation belongs to
+the later approved host integration (T020), and bootstrap invocation remains T013. Setup does
+not change normal startup, create accounts, connect to a database or expose feature routes.
+Bootstrap CSS 5.3.8 is stored locally with its MIT license under wwwroot/lib/bootstrap; asset
+serving and component references are wired in T019/T020 rather than during setup.
+
 The previously observed named local service suggests `.\MSSQLSERVER01` as a possible Windows-
 integrated local SQL host. This is not a verified connection. Use a dedicated database only.
 Keep any certificate-trust exception strictly local; do not weaken external SQL/HTTPS security.

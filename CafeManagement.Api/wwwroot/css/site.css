@@ -1,0 +1,22 @@
+/* Small responsive defaults shared by the future Bootstrap/Blazor screens. */
+html {
+    min-width: 0;
+}
+
+body {
+    overflow-wrap: anywhere;
+}
+
+main {
+    min-width: 0;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+:focus-visible {
+    outline: 0.2rem solid var(--bs-primary, #0d6efd);
+    outline-offset: 0.15rem;
+}

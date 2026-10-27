@@ -38,11 +38,105 @@ is generated only during implementation. `artifacts/cafe/` is ignored build outp
 
 **Goal**: Verify environment/baseline and introduce only the approved dependencies/configuration.
 
-- [ ] T001 Inspect `CafeManagement.sln`, `CafeManagement.Api/CafeManagement.Api.csproj`, `CafeManagement.Api/Program.cs` and `.gitignore`; verify SDK/SQL/certificate prerequisites from `specs/001-menu-table-management/quickstart.md`, run baseline restore/build and manually request existing `/WeatherForecast` and Development Swagger, recording actual output/blockers under this task before changing source (Constitution II/VI).
-- [ ] T002 Add compatible serviced 8.0.x EF Core SqlServer/Design and Identity.EntityFrameworkCore references plus QRCoder 1.8.1 to `CafeManagement.Api/CafeManagement.Api.csproj`, and pin compatible local dotnet-ef in `.config/dotnet-tools.json`; retain net8.0 and existing Swashbuckle unless a demonstrated compatibility issue requires a documented change; restore successfully before proceeding (plan Technical Context).
-- [ ] T003 [P] Define nonsecret connection/public-origin/bootstrap options in `CafeManagement.Api/Infrastructure/Identity/BootstrapOptions.cs` and `CafeManagement.Api/Application/PublicMenuOptions.cs`; add UserSecretsId metadata in `CafeManagement.Api/CafeManagement.Api.csproj` if needed, document local secret keys from `specs/001-menu-table-management/quickstart.md`, validate an absolute trusted HTTPS PublicWebBaseUrl, and keep actual passwords/connection secrets outside committed configuration (after T002; FR-001/006).
-- [ ] T004 [P] Add pinned Bootstrap 5.3.8 CSS and its license under `CafeManagement.Api/wwwroot/lib/bootstrap/css/bootstrap.min.css` and `CafeManagement.Api/wwwroot/lib/bootstrap/LICENSE`, with minimal responsive overrides in `CafeManagement.Api/wwwroot/css/site.css`; verify local files/attribution, avoiding a runtime CDN or unnecessary JS plugins (after T001; FR-007).
-- [ ] T005 Run `dotnet restore CafeManagement.sln`, `dotnet tool restore`, and `dotnet build CafeManagement.sln --no-restore` against `CafeManagement.sln` and `.config/dotnet-tools.json`; verify dependency/SDK compatibility and continued exclusion of secrets/build artifacts by `.gitignore`, recording evidence here (after T002–T004; Constitution II/VI).
+- [X] T001 Inspect `CafeManagement.sln`, `CafeManagement.Api/CafeManagement.Api.csproj`, `CafeManagement.Api/Program.cs` and `.gitignore`; verify SDK/SQL/certificate prerequisites from `specs/001-menu-table-management/quickstart.md`, run baseline restore/build and manually request existing `/WeatherForecast` and Development Swagger, recording actual output/blockers under this task before changing source (Constitution II/VI).
+  - Initial attempt 2026-10-27 was blocked; resolved by the successful retry below. The specification-quality checklist passes
+    16/16, the starting working tree was clean, and existing build/local-state ignore rules apply.
+  - `dotnet --list-sdks` reports only 8.0.400; the installed ASP.NET Core and .NET runtimes are
+    8.0.8. The quickstart's serviced .NET 8 prerequisite is not satisfied. Microsoft's support
+    policy currently lists 8.0.33 and requires current servicing patches:
+    https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core.
+  - `dotnet restore CafeManagement.sln` succeeded with all projects up to date. No baseline build
+    or WeatherForecast/Swagger runtime checks were performed after identifying the prerequisite
+    blocker. A serviced .NET 8 SDK/runtime must be made available before retrying this task.
+  - `dotnet dev-certs https --check` with normal Windows user-store access found a valid localhost
+    development certificate expiring 2026-10-30; trust and phone reachability remain unverified.
+    The sandbox-only certificate check did not see that certificate and is not the final result.
+  - SQL service MSSQL$MSSQLSERVER01 is running; database connectivity/permissions are unverified.
+    No source/package/configuration changes, certificate modifications, SQL writes, or tasks
+    T002–T005 were performed. No task is marked complete; no commit or push is authorized by
+    this incomplete validation result.
+  - Prerequisite retry 2026-10-27: Microsoft release metadata identified SDK 8.0.427 Windows x64,
+    including runtime 8.0.33. Downloaded from builds.dotnet.microsoft.com to the Windows temporary
+    directory; its published SHA-512 matched and Authenticode verified Microsoft Corporation.
+    Administrator installation was explicitly approved by the user.
+  - The official installer failed with exit code 112 (0x70: insufficient disk space). Drive C:
+    had approximately 0.045 GB free afterward. Installation did not resolve the prerequisite:
+    `dotnet --version` and `--list-sdks` still report 8.0.400, and `--list-runtimes` still reports
+    Microsoft.AspNetCore.App, Microsoft.NETCore.App and Microsoft.WindowsDesktop.App 8.0.8.
+  - At that failed retry, T001 remained blocked pending disk space and a serviced SDK installation.
+    No new restore/build/runtime checks were attempted after the installation failure; the prior
+    successful baseline restore remains the only restore result. No application code or target
+    framework changed; T002–T005 remain unstarted. No commit or push was performed.
+  - Successful retry 2026-10-27 after the approved cleanup: C: initially had approximately
+    4.646 GiB free (4.509 GiB immediately before installation). Reused the cached official
+    SDK 8.0.427 Windows x64 installer after rechecking its SHA-512 against Microsoft release
+    metadata and its valid Microsoft Authenticode signature. Approved administrator installation
+    completed with exit code 0; C: had 3.111 GiB free immediately afterward.
+  - `dotnet --version` now reports 8.0.427. `dotnet --list-sdks` lists 8.0.400 and 8.0.427;
+    `dotnet --list-runtimes` lists Microsoft.AspNetCore.App, Microsoft.NETCore.App and
+    Microsoft.WindowsDesktop.App at both 8.0.8 and 8.0.33. The project still targets net8.0.
+  - Post-installation `dotnet dev-certs https --check` passed with the existing certificate.
+    A check attempted while installation was still copying SDK files encountered a transient
+    missing runtimeconfig error; the completed installation and all subsequent checks passed.
+    Normal HTTPS requests below passed certificate validation without a bypass. The existing
+    certificate expires 2026-10-30; phone reachability remains a later feature validation concern.
+  - Read-only integrated-authentication connection to localhost\MSSQLSERVER01/master succeeded:
+    SQL Server version 16.0.1000.6 and CREATE ANY DATABASE permission = 1. No database was created
+    or modified. The local connection used TrustServerCertificate=True; production TLS and the
+    dedicated CafeManagement database remain later setup work.
+  - `dotnet restore CafeManagement.sln` succeeded; `dotnet build CafeManagement.sln --no-restore`
+    succeeded with 0 warnings and 0 errors (19.89 seconds). Existing bin/obj output remains ignored.
+  - Ran the unchanged application's https launch profile in Development. HTTPS GET
+    /WeatherForecast returned 200 with five forecasts; /swagger/index.html and
+    /swagger/v1/swagger.json returned 200, with OpenAPI 3.0.1 documenting /WeatherForecast.
+    Stopped the validation host afterward. C: temporarily showed 1.650 GiB free after validation;
+    the final check after shutdown showed 3.517 GiB free, with neither baseline port listening.
+  - T001 is complete. Only this task's documentation changed; no application source, configuration,
+    target framework or dependency references changed. T002–T005 remain unstarted. No automated
+    tests, commit or push were performed; further work awaits review.
+- [X] T002 Add compatible serviced 8.0.x EF Core SqlServer/Design and Identity.EntityFrameworkCore references plus QRCoder 1.8.1 to `CafeManagement.Api/CafeManagement.Api.csproj`, and pin compatible local dotnet-ef in `.config/dotnet-tools.json`; retain net8.0 and existing Swashbuckle unless a demonstrated compatibility issue requires a documented change; restore successfully before proceeding (plan Technical Context).
+- [X] T003 [P] Define nonsecret connection/public-origin/bootstrap options in `CafeManagement.Api/Infrastructure/Identity/BootstrapOptions.cs` and `CafeManagement.Api/Application/PublicMenuOptions.cs`; add UserSecretsId metadata in `CafeManagement.Api/CafeManagement.Api.csproj` if needed, document local secret keys from `specs/001-menu-table-management/quickstart.md`, validate an absolute trusted HTTPS PublicWebBaseUrl, and keep actual passwords/connection secrets outside committed configuration (after T002; FR-001/006).
+- [X] T004 [P] Add pinned Bootstrap 5.3.8 CSS and its license under `CafeManagement.Api/wwwroot/lib/bootstrap/css/bootstrap.min.css` and `CafeManagement.Api/wwwroot/lib/bootstrap/LICENSE`, with minimal responsive overrides in `CafeManagement.Api/wwwroot/css/site.css`; verify local files/attribution, avoiding a runtime CDN or unnecessary JS plugins (after T001; FR-007).
+- [X] T005 Run `dotnet restore CafeManagement.sln`, `dotnet tool restore`, and `dotnet build CafeManagement.sln --no-restore` against `CafeManagement.sln` and `.config/dotnet-tools.json`; verify dependency/SDK compatibility and continued exclusion of secrets/build artifacts by `.gitignore`, recording evidence here (after T002–T004; Constitution II/VI).
+
+
+### Setup execution evidence (T002–T005, 2026-10-27)
+
+- T002: Checked official NuGet v3 package metadata and pinned EF Core SqlServer/Design,
+  Identity.EntityFrameworkCore and the local dotnet-ef tool to compatible stable 8.0.33;
+  QRCoder is pinned to 1.8.1. EF Design is PrivateAssets=all. Target remains net8.0;
+  Swashbuckle.AspNetCore remains 6.4.0. Solution restore and local tool restore succeeded
+  before T003 began. No other framework, frontend project or build toolchain was added.
+- T003: Added BootstrapOptions and PublicMenuOptions, with no credentials or default staff
+  role. Added nonsecret UserSecretsId metadata and documented all connection/public-origin/
+  bootstrap configuration keys in quickstart.md. Framework connection-string configuration
+  is reused; no extra connection abstraction or actual local secret values were created.
+  Lightweight in-memory validation of the built class accepted three HTTPS origins and rejected
+  ten blank/relative/HTTP/credential-bearing/path/query/fragment/whitespace cases. Empty bootstrap
+  options were rejected. The PowerShell validation command required loading ASP.NET shared
+  framework assemblies first; no application defect or test project was introduced.
+  Options binding/startup validation remains T020; operator provisioning remains T013.
+- T004: Downloaded only Bootstrap 5.3.8 CSS and its MIT license from the official twbs/bootstrap
+  v5.3.8 tag. Verified version/license headers and license text; CSS is 232111 bytes, SHA-256
+  D85327D99C7A3EE1F9B5D0500D1370ACEA3AD2DB39C163C2F51F232BAEDBDEDE.
+  Sources: https://raw.githubusercontent.com/twbs/bootstrap/v5.3.8/dist/css/bootstrap.min.css
+  and https://raw.githubusercontent.com/twbs/bootstrap/v5.3.8/LICENSE.
+  Added only small wrapping/image/focus CSS defaults. No runtime CDN, JS plugins, package
+  manager, generated frontend files or UI screens. Static serving/layout references remain
+  T019/T020; this setup check does not claim a rendered mobile feature has been validated.
+- T005: Using SDK 8.0.427, dotnet restore CafeManagement.sln and dotnet tool restore succeeded.
+  dotnet build CafeManagement.sln --no-restore succeeded with 0 warnings and 0 errors
+  (13.06 seconds); dotnet ef --version reports 8.0.33. Resolved packages match the exact pins.
+  Existing HTTPS launch profile still starts in Development; WeatherForecast returns HTTP 200
+  with five forecasts, Swagger UI returns HTTP 200 and its OpenAPI document includes
+  WeatherForecast. HTTPS certificate validation passed without bypass. Validation host stopped.
+- Extended .gitignore with .env.* to protect local secret variants. Checked ignore coverage for
+  .env/.env.local, bin/obj, artifacts and .pfx. Reviewed source/configuration changes for secret
+  values and unintended changes; no passwords, credentialed connection strings, tokens,
+  generated build output or local state belong in the setup commit. No database writes,
+  migration, account creation, automated tests or changes to Program.cs/sample endpoints.
+- T001 evidence is preserved. Only T001–T005 are marked complete; T006 onward remains unstarted.
+  No Spec Kit extension hooks file exists. The setup phase is complete; later work requires review.
 
 **Checkpoint**: Baseline is known; dependencies restore and current solution builds. No migration
 or account bootstrap until the target database and local secrets have been verified.

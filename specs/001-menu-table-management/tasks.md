@@ -492,7 +492,48 @@ including unavailable Admin-visible products; no tables, customer ordering or pa
 - Only T001–T034 are marked complete. T035 (restart/reopen increment checkpoint) and all later
   work remain unstarted; this evidence does not declare the full menu-management increment done.
 
-- [ ] T035 [US1] Reopen edited categories/products, restart the host and verify persisted names/price/availability via `CafeManagement.Api/Components/Pages/Admin/Categories.razor` and `Products.razor`; record SC-001 and the applicable quickstart outcomes in this file before declaring the menu-management increment complete (after T034; FR-004, SC-001).
+- [X] T035 [US1] Reopen edited categories/products, restart the host and verify persisted names/price/availability via `CafeManagement.Api/Components/Pages/Admin/Categories.razor` and `Products.razor`; record SC-001 and the applicable quickstart outcomes in this file before declaring the menu-management increment complete (after T034; FR-004, SC-001).
+
+### Menu-management checkpoint evidence (T035, 2026-10-27)
+
+- Verified T001–T034 complete, clean master tracking origin/master, and the 16/16 specification
+  checklist gate. Reviewed T035, SC-001/FR-004, approved planning/contracts, applicable quickstart
+  checks and Constitution. No Spec Kit extension hooks exist. Only T035 was executed.
+- SC-001/FR-004 passed: one existing Admin created two labelled categories and two products
+  through the live Interactive Server forms, edited both category/product names, and changed
+  product prices and availability. Reopened all four editors before and after completely stopping
+  and restarting the HTTPS host. All saved values matched the API: 2/2 categories and 2/2 products
+  retained (100%), including category associations, EGP 36.75/47.60 and true/false availability.
+  Unavailable products remained visible/editable to Admin. Direct navigation and refresh passed.
+- Applicable quickstart input/error checks passed: whitespace-only category names and zero,
+  negative and 25.501 prices showed validation feedback, retained input and cleared success text.
+  A browser-only invalid category option exercised the server's missing-category failure; the
+  field message appeared, entered values remained and the prior saved product was unchanged.
+  API edits rejected blank/whitespace/overlength category/product names, invalid prices,
+  missing/nonexistent category and missing availability with safe 400 ProblemDetails.
+  Re-reading both categories/products confirmed rejected changes had not persisted.
+- Applicable quickstart permissions/antiforgery checks passed: anonymous category/product
+  read/create/edit APIs returned 401; Cashier equivalents returned 403. Both roles were denied
+  management forms. Admin POST/PUT requests with missing/incorrect CSRF tokens returned 400.
+  Missing records returned 404 and DELETE returned 405. Reviewed per-operation current Identity
+  user/stamp/Admin checks and short-lived factory contexts; no UI-only authorization dependency.
+  Valid Admin login and ordinary HTTP sign-out passed; subsequent protected API access was 401.
+- Existing WeatherForecast still returned five forecasts; Swagger UI/schema and category/product
+  routes worked. Restore succeeded; dotnet build CafeManagement.sln --no-restore passed with
+  0 warnings and 0 errors (13.00 seconds). EF has-pending-model-changes reported no model changes.
+- Preserved original categories/products 1–6 using read-only before/after data fingerprints;
+  Identity account/password/security-stamp and role-membership fingerprints were unchanged.
+  Retained new validation categories 7–8 and products 7–8, labelled T035 1793069315323.
+  Final counts: eight categories, eight products, two existing accounts, two roles, one migration.
+  No deletion, database reset, migration, account provisioning/reset or application changes.
+- Validation used disposable headless Edge sessions and in-memory diagnostic commands, without
+  adding automated tests/files. Node-backed requests used a disposable diagnostic-context HTTPS
+  certificate override only; application/certificate configuration was unchanged. A nested
+  PowerShell here-string initially prevented the read-only SQL diagnostic from parsing; corrected
+  command quoting before taking the baseline. No application defect was found. Hosts were stopped.
+- US1 menu administration checkpoint is complete. Table/QR/public-menu/phone, reconnect and
+  later cross-cutting quickstart checks remain for their own tasks; none is claimed passed here.
+  T036 and all later tasks remain unchecked and were not implemented.
 
 **Checkpoint**: First useful MVP is US1 administration, not the whole QR/customer feature.
 All stories remain P1; sequence reflects implementation dependency, not a downgraded priority.

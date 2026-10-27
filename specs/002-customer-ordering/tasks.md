@@ -3,7 +3,7 @@
 **Input**: Approved [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [API contract](contracts/api.md), [UI contract](contracts/ui.md),
 [quickstart.md](quickstart.md), requirements.md and Constitution v1.0.1.
-**Created**: 2026-10-27. **Status**: Setup T001–T003 validated; T004–T063 not started.
+**Created**: 2026-10-27. **Status**: T001–T008 validated; T009–T063 not started.
 **Organization**: Setup → shared foundation → US1/US2/US3/US4 → cross-cutting validation.
 **Validation policy**: Restore/build and manual checks; no generated automated tests by default.
 Only an explicitly requested test or a concrete bug requiring diagnosis can justify an exception.
@@ -41,11 +41,11 @@ the existing app. This phase creates no replacement scaffolding.
 **Gate**: All tasks in this phase must pass before story implementation. Migration application
 requires confirmed target/review/backup readiness from T003, not an assumed disposable database.
 
-- [ ] T004 Create `CafeManagement.Api/Domain/OrderType.cs` and `CafeManagement.Api/Domain/OrderStatus.cs` with exactly `DineIn`, `Pickup` and `Submitted`, `Preparing`, `Ready`, `Completed`, `Rejected`; no payment or delivery enums; compile these declarations against net8.0 (after T003; FR-008/012).
-- [ ] T005 Create shared identity/access fields in `CafeManagement.Api/Domain/Order.cs`: Id "bigint identity primary key, internal; no customer authorization value"; Reference "uniqueidentifier, generated server-side, required/unique, display-only"; CapabilityHash "binary(32), required/unique SHA-256 digest; raw 32-byte token never stored"; IntentHash "binary(32), required canonical submission-intent fingerprint"; CreatedAtUtc "datetime2, server-generated UTC instant"; RowVersion "SQL rowversion, EF concurrency token for later legitimate writers"; expose no plaintext credential or Identity-user FK (after T004; FR-007/009/012).
-- [ ] T006 Complete `CafeManagement.Api/Domain/Order.cs` with Type "nvarchar(16), DineIn or Pickup only"; TableId "nullable int FK to CafeTables, delete restricted"; TableLabel "nullable nvarchar(120), accepted table-label snapshot"; CustomerName "nvarchar(120), required, trimmed/nonblank"; CustomerPhone "nvarchar(40), required, trimmed/nonblank; preserve entered formatting"; Currency "char(3), required, EGP only"; Total "decimal(18,2), required, positive; sum of saved line amounts"; Status "nvarchar(16), Submitted initially; Preparing, Ready, Completed, Rejected allowed"; RejectionReason "nullable nvarchar(500); required/nonblank iff Rejected" and order-line relationship (after T005; FR-003/004/006/008/013).
-- [ ] T007 Create `CafeManagement.Api/Domain/OrderLine.cs` with Id "bigint identity primary key"; OrderId "required bigint FK to Orders, delete restricted"; ProductId "required int FK to Products, delete restricted"; ProductName "required nonblank nvarchar(120), accepted snapshot"; Quantity "int > 0, whole number"; UnitPrice "decimal(18,2) > 0, accepted authoritative price"; LineTotal "decimal(18,2) > 0; exact UnitPrice × Quantity"; compile the completed domain types together without changing existing entities (after T006; FR-002/005/006).
-- [ ] T008 [P] Configure `CafeManagement.Api/Infrastructure/Persistence/Configurations/OrderConfiguration.cs` exactly per T005/T006: unique Reference/CapabilityHash, binary lengths, field lengths/precision, rowversion, restrictive table FK, TableId and (Status, CreatedAtUtc) indexes; checks for valid Type/Status/Currency, positive Total, nonblank name/phone, DineIn table/label required versus Pickup both null, and nonblank reason iff Rejected (after T007; parallel with T009/T010; FR-003/004/005/007/008/013).
+- [X] T004 Create `CafeManagement.Api/Domain/OrderType.cs` and `CafeManagement.Api/Domain/OrderStatus.cs` with exactly `DineIn`, `Pickup` and `Submitted`, `Preparing`, `Ready`, `Completed`, `Rejected`; no payment or delivery enums; compile these declarations against net8.0 (after T003; FR-008/012).
+- [X] T005 Create shared identity/access fields in `CafeManagement.Api/Domain/Order.cs`: Id "bigint identity primary key, internal; no customer authorization value"; Reference "uniqueidentifier, generated server-side, required/unique, display-only"; CapabilityHash "binary(32), required/unique SHA-256 digest; raw 32-byte token never stored"; IntentHash "binary(32), required canonical submission-intent fingerprint"; CreatedAtUtc "datetime2, server-generated UTC instant"; RowVersion "SQL rowversion, EF concurrency token for later legitimate writers"; expose no plaintext credential or Identity-user FK (after T004; FR-007/009/012).
+- [X] T006 Complete `CafeManagement.Api/Domain/Order.cs` with Type "nvarchar(16), DineIn or Pickup only"; TableId "nullable int FK to CafeTables, delete restricted"; TableLabel "nullable nvarchar(120), accepted table-label snapshot"; CustomerName "nvarchar(120), required, trimmed/nonblank"; CustomerPhone "nvarchar(40), required, trimmed/nonblank; preserve entered formatting"; Currency "char(3), required, EGP only"; Total "decimal(18,2), required, positive; sum of saved line amounts"; Status "nvarchar(16), Submitted initially; Preparing, Ready, Completed, Rejected allowed"; RejectionReason "nullable nvarchar(500); required/nonblank iff Rejected" and order-line relationship (after T005; FR-003/004/006/008/013).
+- [X] T007 Create `CafeManagement.Api/Domain/OrderLine.cs` with Id "bigint identity primary key"; OrderId "required bigint FK to Orders, delete restricted"; ProductId "required int FK to Products, delete restricted"; ProductName "required nonblank nvarchar(120), accepted snapshot"; Quantity "int > 0, whole number"; UnitPrice "decimal(18,2) > 0, accepted authoritative price"; LineTotal "decimal(18,2) > 0; exact UnitPrice × Quantity"; compile the completed domain types together without changing existing entities (after T006; FR-002/005/006).
+- [X] T008 [P] Configure `CafeManagement.Api/Infrastructure/Persistence/Configurations/OrderConfiguration.cs` exactly per T005/T006: unique Reference/CapabilityHash, binary lengths, field lengths/precision, rowversion, restrictive table FK, TableId and (Status, CreatedAtUtc) indexes; checks for valid Type/Status/Currency, positive Total, nonblank name/phone, DineIn table/label required versus Pickup both null, and nonblank reason iff Rejected (after T007; parallel with T009/T010; FR-003/004/005/007/008/013).
 - [ ] T009 [P] Configure `CafeManagement.Api/Infrastructure/Persistence/Configurations/OrderLineConfiguration.cs` exactly per T007, including restrictive order/product FKs, unique (OrderId, ProductId), ProductId index, nonblank snapshot name, positive quantity/price/line total and widened-decimal SQL arithmetic check; do not claim cross-row sum/nonempty-line invariants are SQL CHECKs (after T007; parallel with T008/T010; FR-002/005/006).
 - [ ] T010 [P] Create the internal `CafeManagement.Api/Application/OrderLifecycle.cs` rule allowing only Submitted→Preparing, Preparing→Ready, Ready→Completed and Submitted→Rejected with a trimmed nonblank reason of at most 500 characters; Completed/Rejected terminal; no public setter/endpoint/staff UI; verify rule table manually against every state pair using an in-memory diagnostic if needed (after T007; parallel with T008/T009; FR-008, SC-005, future POS boundary).
 - [ ] T011 Add Orders/OrderLines to `CafeManagement.Api/Infrastructure/Persistence/CafeDbContext.cs` and apply the two new configurations; verify existing DbSets, Identity mapping, product/table schemas and context-factory registration remain intact; build the solution (after T008–T010; FR-005/012).
@@ -304,3 +304,52 @@ authorized validated scope and never pre-existing unrelated edits or secrets.
   All readiness/restore/preservation checks subsequently passed. Only this task document changes.
 - T001–T003 are complete. T004–T063 remain unchecked and were not started. No ordering, POS,
   payments, delivery, new entities, code, migrations, certificates or network changes were made.
+
+### Order domain and header mapping evidence (T004–T008, 2026-10-27)
+
+- Started from clean master at eb256c0d4f1fd35635b0570d52ab70a437cd45cb; T001–T003 complete,
+  specification checklist 16/16, no hooks or additional repository instructions. Reviewed exact
+  T004–T008 dependencies, approved model/spec/plan/contracts and Constitution. Feature 001's
+  54 completed tasks and pending T051/T056 are preserved. No later tasks were implemented.
+- T004: Added OrderType (DineIn/Pickup) and OrderStatus (Submitted/Preparing/Ready/Completed/
+  Rejected) only. T005–T006: Added Order with long internal ID, distinct backend-generated
+  nonempty Guid reference, required digest fields, optional table/navigation/label snapshot,
+  required guest fields, EGP, decimal total, Submitted default, internal fulfillment/reason
+  setters, UTC creation default, database rowversion and initialized Lines collection.
+  No plaintext capability, guest Identity FK, payment fields or lifecycle mutation workflow.
+- T007: Added OrderLine with long IDs/order FK, existing int product FK/navigation, required
+  product-name snapshot, int quantity and decimal unit/line amounts. Existing entities,
+  DbContext, Program.cs and application routes were not edited. Explicit line mapping/checks
+  remain T009; no service/DTO/checkout behavior is claimed complete.
+- T008: Added OrderConfiguration with identity key, unique reference/digest, binary(32)
+  digests, enum-to-string 16-character Type/Status, table label/name length 120, phone 40,
+  char(3) EGP, decimal(18,2) positive total, reason 500, datetime2, required rowversion,
+  restrictive optional table FK, TableId and (Status, CreatedAtUtc) indexes. Eight SQL checks
+  cover type/status/currency, name/phone, positive total, correct table shape and reason iff
+  Rejected. Nullable label/reason branches explicitly test IS NOT NULL to avoid SQL UNKNOWN
+  accidentally accepting a missing dine-in label or rejection reason.
+- Restore passed; Debug build passed with 0 warnings/0 errors (9.68 seconds), on net8.0 and
+  unchanged dependencies. In-memory reflection confirmed exact enums, distinct references,
+  EGP/Submitted/UTC defaults, initialized lines and no public status/reason setter. No test
+  project, test framework, committed diagnostic, host process or automated test suite was added.
+- Inspected EF-generated create SQL in memory only, never executed it. All ten existing
+  EF-mapped table definitions and their indexes matched the before snapshot. Orders columns,
+  eight checks, four indexes, rowversion and ON DELETE NO ACTION table FK matched this task.
+  Existing ApplyConfigurationsFromAssembly discovers OrderConfiguration and its related
+  OrderLine by convention; this is not a DbContext edit or execution of T011.
+- EF model inspection emitted precision warnings for OrderLine.UnitPrice and LineTotal:
+  explicit OrderLine configuration is intentionally pending T009. Its temporary conventional
+  table name is OrderLine. Do not apply this intermediate model as database schema; T009 and
+  the later reviewed migration will supply the complete approved OrderLines mapping.
+- Evaluated all eight generated Order CHECK predicates through read-only SQL SELECTs on the
+  owned T003 validation target. All 21 cases passed: valid pickup/dine-in and five statuses;
+  invalid type/status/currency, zero/negative total, blank name/phone, missing/blank dine-in
+  table context, pickup table data, rejected null/blank reason and inappropriate non-rejected
+  reason. This verifies predicate semantics, not installed database constraints; actual schema
+  application remains T012/T013 and was not performed.
+- Read-only before/after fingerprints matched all 11 original tables, including five table
+  records/QR identifiers, eight categories, eight products, two accounts/roles/memberships
+  and the existing single migration. The owned validation database still has no order tables.
+  No original or validation records, migration files, account credentials or configuration changed.
+- Reviewed the final source/task diff and secret/ignore boundaries. T004–T008 are complete;
+  T009–T063 remain unchecked. No POS, payment, delivery, API/UI, migration or unrelated change.

@@ -433,11 +433,65 @@ including unavailable Admin-visible products; no tables, customer ordering or pa
   No automated test files, product endpoints, UI screens, POS/orders/payments/reports or tasks
   beyond T029. T030 onward remains unstarted; full component/controller integration is later work.
 
-- [ ] T030 [P] [US1] Add `CafeManagement.Api/Controllers/AdminProductsController.cs` with the approved GET list/item, POST and PUT `/api/admin/products` contract, Admin policy/unsafe-request antiforgery and invariant price DTO mapping, showing all products only to Admin (after T028; FR-001/003/004/010/011).
-- [ ] T031 [P] [US1] Add `CafeManagement.Api/Components/Pages/Admin/Categories.razor` with Admin route authorization, Interactive Server, Bootstrap list/Add/Edit EditForm, field errors and loading/empty/saving states; obtain trusted principal from AuthenticationStateProvider and call MenuService directly (after T027; FR-001/002/004/007).
-- [ ] T032 [P] [US1] Add `CafeManagement.Api/Components/Pages/Admin/Products.razor` with Admin/Interactive Server, all-product list and form for name/category/decimal EGP price/availability, IDs distinguishing duplicate category names, retained input on failure and duplicate-submit prevention; no circuit-retained context or loopback HTTP (after T028; FR-001/003/004/010/011).
-- [ ] T033 [US1] Register MenuService in `CafeManagement.Api/Program.cs` and confirm `CafeManagement.Api/Components/Layout/AdminLayout.razor` navigation reaches category/product pages; build `CafeManagement.sln` and manually exercise list/item/create/edit through both component and Swagger/controller paths (after T029–T032; FR-002/003/004).
-- [ ] T034 [US1] Manually verify the input/security/save scenarios for `CafeManagement.Api/Components/Pages/Admin/Categories.razor`, `Products.razor` and `Controllers/AdminProductsController.cs`: EGP25.50, blank/whitespace/overlength, 0/negative/25.501 prices, duplicate names, nonexistent category, unavailable Admin visibility, denied anonymous/Cashier calls and failed-save feedback; record outcomes here (after T033; FR-001/004/008/010/011, SC-005/006/008).
+- [X] T030 [P] [US1] Add `CafeManagement.Api/Controllers/AdminProductsController.cs` with the approved GET list/item, POST and PUT `/api/admin/products` contract, Admin policy/unsafe-request antiforgery and invariant price DTO mapping, showing all products only to Admin (after T028; FR-001/003/004/010/011).
+- [X] T031 [P] [US1] Add `CafeManagement.Api/Components/Pages/Admin/Categories.razor` with Admin route authorization, Interactive Server, Bootstrap list/Add/Edit EditForm, field errors and loading/empty/saving states; obtain trusted principal from AuthenticationStateProvider and call MenuService directly (after T027; FR-001/002/004/007).
+- [X] T032 [P] [US1] Add `CafeManagement.Api/Components/Pages/Admin/Products.razor` with Admin/Interactive Server, all-product list and form for name/category/decimal EGP price/availability, IDs distinguishing duplicate category names, retained input on failure and duplicate-submit prevention; no circuit-retained context or loopback HTTP (after T028; FR-001/003/004/010/011).
+- [X] T033 [US1] Register MenuService in `CafeManagement.Api/Program.cs` and confirm `CafeManagement.Api/Components/Layout/AdminLayout.razor` navigation reaches category/product pages; build `CafeManagement.sln` and manually exercise list/item/create/edit through both component and Swagger/controller paths (after T029–T032; FR-002/003/004).
+- [X] T034 [US1] Manually verify the input/security/save scenarios for `CafeManagement.Api/Components/Pages/Admin/Categories.razor`, `Products.razor` and `Controllers/AdminProductsController.cs`: EGP25.50, blank/whitespace/overlength, 0/negative/25.501 prices, duplicate names, nonexistent category, unavailable Admin visibility, denied anonymous/Cashier calls and failed-save feedback; record outcomes here (after T033; FR-001/004/008/010/011, SC-005/006/008).
+
+### Product API and menu screens evidence (T030–T034, 2026-10-27)
+
+- Resumed the usage-limit interruption by inspecting the entire Git diff and all five existing
+  changed files before editing. Preserved the interrupted product controller, both admin pages,
+  category-controller DI adjustment and MenuService registration. T001–T029 were already complete;
+  quality checklist passed 16/16, and no extension hook file exists. No further application-code
+  changes were needed during the resumed session; only this verified task evidence was added.
+- T030: AdminProductsController implements GET list/item and POST/PUT with Admin policy, explicit
+  unsafe-request antiforgery, ProductInput mapping, fixed EGP/two-place invariant string responses,
+  status documentation/Location and shared failure mapping. Admin listing includes unavailable
+  products. No DELETE/deactivation, unrelated API or entity binding was added.
+- T031–T032: Admin-authorized Interactive Server category/product pages use Bootstrap, direct
+  MenuService calls and the current AuthenticationStateProvider principal per operation. Forms
+  provide add/edit, validation summaries/field feedback, loading/empty/saving states, retained
+  input on failure and disabled controls plus saving guards against duplicate submissions.
+  Product forms use nullable decimal/category/availability input without inventing defaults;
+  selectors distinguish category duplicates by ID. Components retain no context/Identity store
+  or loopback HTTP client. Invalid submission clears earlier success feedback before validation.
+- T033: Registered scoped MenuService and changed the category controller to consume that shared
+  registration. Existing staff navigation reaches both real pages. Real-browser checks on the
+  live HTTPS host exercised category and product list/item/create/edit through interactive form
+  events; separate HTTP controller checks exercised the same product operations and inspected
+  Swagger/OpenAPI routes. Existing source and five interrupted files remained intact.
+- T034 component checks passed: EGP25.50 and two-place display; blank/whitespace/overlength names;
+  zero/negative/25.501 prices; duplicate category/product names; explicit category IDs; availability
+  changes and unavailable Admin visibility. Invalid values remained in forms with feedback and no
+  false success. A browser-only tampered category option triggered the real missing-category
+  service failure, displayed its field error and retained entered product values without saving.
+  A disposable second host using a process-only nonexistent database target verified safe category
+  failed-save feedback, retained input and no success/exception disclosure. It never created or
+  modified a database or changed the real connection configuration.
+- Product API checks passed: GET/list/item, POST 201 plus Location, PUT 200 and re-read, exact EGP
+  formatting, duplicates allowed, blank/whitespace/overlength/price/category/availability failures
+  returning 400, rejected edits preserving saved values, missing/invalid CSRF rejected and DELETE
+  returning 405. Anonymous category/product APIs returned 401; Cashier GET/POST returned 403.
+  Anonymous component navigation required login; Cashier component navigation displayed denial.
+- Restore passed. Initial build encountered the old validation process locking apphost.exe;
+  verified its path and stopped only that project's leftover process. Rebuild succeeded with
+  0 warnings and 0 errors (1.95 seconds). Model/snapshot check reports no pending changes.
+  No dependency, entity/configuration/migration, account or authentication-handler changes.
+- Browser diagnostics used disposable headless Edge contexts and in-memory commands, not test
+  files/projects. Corrected diagnostic BOM decoding and waiting for editor replacement. Browser
+  navigation initially verified the trusted local certificate; Node API requests required a
+  local diagnostic-context certificate override, with no application/certificate setting change.
+  Failed attempts were not counted as passing until the relevant checks were completed successfully.
+- Validation retained newly labelled categories 4–6 and products 3–6; category 4 came from the
+  first interrupted browser-check attempt. Original categories 1–3 and products 1–2 were preserved.
+  Final read-only counts: six categories/six products, two existing accounts/two roles/one migration.
+  No sample cleanup, database reset or account provisioning/reset was performed. Validation hosts
+  were stopped afterward. Credentials/build output/local configuration remain outside the commit.
+- Only T001–T034 are marked complete. T035 (restart/reopen increment checkpoint) and all later
+  work remain unstarted; this evidence does not declare the full menu-management increment done.
+
 - [ ] T035 [US1] Reopen edited categories/products, restart the host and verify persisted names/price/availability via `CafeManagement.Api/Components/Pages/Admin/Categories.razor` and `Products.razor`; record SC-001 and the applicable quickstart outcomes in this file before declaring the menu-management increment complete (after T034; FR-004, SC-001).
 
 **Checkpoint**: First useful MVP is US1 administration, not the whole QR/customer feature.

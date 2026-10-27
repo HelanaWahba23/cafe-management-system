@@ -1,0 +1,189 @@
+@page "/admin/products"
+@attribute [Authorize(Policy = "Admin")]
+@rendermode InteractiveServer
+@layout AdminLayout
+@using System.Globalization
+@using CafeManagement.Api.Application
+@using CafeManagement.Api.Contracts
+@inject MenuService Menu
+@inject AuthenticationStateProvider Authentication
+
+<PageTitle>Products | Cafe Management</PageTitle>
+<h1>Products</h1>
+@if (failure is not null)
+{
+    <div class="alert alert-danger" role="alert">@failure</div>
+}
+@if (notice is not null)
+{
+    <p role="status" class="text-success">@notice</p>
+}
+<button type="button" class="btn btn-outline-secondary mb-3" disabled="@(loading || saving)" @onclick="LoadAsync">Reload products</button>
+@if (loading)
+{
+    <p role="status">Loading products…</p>
+}
+else
+{
+    @if (products.Length == 0)
+    {
+        <p>No products to display.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <caption>All products, including unavailable products</caption>
+                <thead><tr><th scope="col">Name</th><th scope="col">Category</th><th scope="col">Price</th><th scope="col">Availability</th><th scope="col">Actions</th></tr></thead>
+                <tbody>
+                    @foreach (var product in products)
+                    {
+                        <tr><td>@product.Name</td><td>@CategoryName(product.CategoryId)</td><td>EGP @product.Price.ToString("F2", CultureInfo.InvariantCulture)</td><td>@(product.IsAvailable ? "Available" : "Unavailable")</td><td><button type="button" class="btn btn-outline-primary" disabled="@saving" @onclick="() => EditAsync(product.Id)" aria-label="@($"Edit product {product.Id}: {product.Name}")">Edit</button></td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    <h2>@(editingId is null ? "Add product" : $"Edit product {editingId}")</h2>
+    <EditForm EditContext="editContext" OnSubmit="SaveAsync" FormName="product-editor">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="text-danger" />
+        <fieldset disabled="@saving" class="col-md-8 col-lg-6">
+            <legend class="visually-hidden">Product details</legend>
+            <div class="mb-3">
+                <label for="product-name" class="form-label">Name</label>
+                <InputText id="product-name" class="form-control" @bind-Value="model.Name" />
+                <ValidationMessage For="() => model.Name" class="text-danger" />
+            </div>
+            <div class="mb-3">
+                <label for="product-category" class="form-label">Category</label>
+                <InputSelect id="product-category" class="form-select" @bind-Value="model.CategoryId">
+                    <option value="">Choose a category</option>
+                    @foreach (var category in categories)
+                    {
+                        <option value="@category.Id">@category.Name (#@category.Id)</option>
+                    }
+                </InputSelect>
+                <ValidationMessage For="() => model.CategoryId" class="text-danger" />
+            </div>
+            <div class="mb-3">
+                <label for="product-price" class="form-label">Price (EGP)</label>
+                <InputNumber id="product-price" class="form-control" @bind-Value="model.Price" step="any" />
+                <ValidationMessage For="() => model.Price" class="text-danger" />
+            </div>
+            <div class="mb-3">
+                <label for="product-availability" class="form-label">Availability</label>
+                <InputSelect id="product-availability" class="form-select" @bind-Value="model.IsAvailable">
+                    <option value="">Choose availability</option>
+                    <option value="true">Available</option>
+                    <option value="false">Unavailable</option>
+                </InputSelect>
+                <ValidationMessage For="() => model.IsAvailable" class="text-danger" />
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="submit" class="btn btn-primary">@(saving ? "Saving…" : "Save product")</button>
+                <button type="button" class="btn btn-outline-secondary" @onclick="NewProduct">New product</button>
+            </div>
+        </fieldset>
+    </EditForm>
+}
+
+@code {
+    private ProductDetails[] products = [];
+    private CategoryResponse[] categories = [];
+    private ProductEditModel model = new();
+    private EditContext editContext = default!;
+    private ValidationMessageStore messages = default!;
+    private int? editingId;
+    private bool loading = true, saving;
+    private string? failure, notice;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SetEditor(null, new());
+        await LoadAsync();
+    }
+
+    private string CategoryName(int id) => $"{categories.FirstOrDefault(c => c.Id == id)?.Name} (#{id})";
+
+    private void SetEditor(int? id, ProductEditModel value)
+    {
+        editingId = id;
+        model = value;
+        editContext = new(model);
+        messages = new(editContext);
+    }
+
+    private void NewProduct()
+    {
+        if (saving || loading) return;
+        failure = notice = null;
+        SetEditor(null, new());
+    }
+
+    private async Task LoadAsync()
+    {
+        if (saving) return;
+        loading = true;
+        failure = null;
+        try
+        {
+            var principal = (await Authentication.GetAuthenticationStateAsync()).User;
+            var categoryList = await Menu.ListCategoriesAsync(principal);
+            var productList = await Menu.ListProductsAsync(principal);
+            if (categoryList.Error is not null || productList.Error is not null)
+                failure = (categoryList.Error ?? productList.Error)!.Message;
+            else { categories = categoryList.Value!; products = productList.Value!; }
+        }
+        finally { loading = false; }
+    }
+
+    private async Task EditAsync(int id)
+    {
+        if (saving || loading) return;
+        loading = true;
+        failure = notice = null;
+        try
+        {
+            var result = await Menu.GetProductAsync((await Authentication.GetAuthenticationStateAsync()).User, id);
+            if (result.Error is not null) failure = result.Error.Message;
+            else
+            {
+                var value = result.Value!;
+                SetEditor(value.Id, new() { Name = value.Name, CategoryId = value.CategoryId, Price = value.Price, IsAvailable = value.IsAvailable });
+            }
+        }
+        finally { loading = false; }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (saving || loading) return;
+        failure = notice = null;
+        messages.Clear();
+        if (!editContext.Validate()) return;
+        saving = true;
+        try
+        {
+            var principal = (await Authentication.GetAuthenticationStateAsync()).User;
+            var result = editingId is null ? await Menu.CreateProductAsync(principal, model)
+                : await Menu.EditProductAsync(principal, editingId.Value, model);
+            if (result.Error is not null)
+            {
+                failure = result.Error.Message;
+                if (result.Error.FieldErrors is not null)
+                    foreach (var field in result.Error.FieldErrors)
+                        messages.Add(new FieldIdentifier(model, char.ToUpperInvariant(field.Key[0]) + field.Key[1..]), field.Value);
+                editContext.NotifyValidationStateChanged();
+                return;
+            }
+            var value = result.Value!;
+            SetEditor(value.Id, new() { Name = value.Name, CategoryId = value.CategoryId, Price = value.Price, IsAvailable = value.IsAvailable });
+            notice = "Product saved.";
+            var list = await Menu.ListProductsAsync(principal);
+            if (list.Error is null) products = list.Value!;
+            else failure = "The product was saved, but the list could not be refreshed. Reload products.";
+        }
+        finally { saving = false; }
+    }
+}

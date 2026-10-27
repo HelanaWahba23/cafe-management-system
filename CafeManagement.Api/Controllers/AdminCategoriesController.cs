@@ -1,20 +1,15 @@
 using CafeManagement.Api.Application;
 using CafeManagement.Api.Contracts;
-using CafeManagement.Api.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace CafeManagement.Api.Controllers;
 
 [ApiController]
 [Authorize(Policy = "Admin")]
 [Route("api/admin/categories")]
-public sealed class AdminCategoriesController(IDbContextFactory<CafeDbContext> factory, StaffAccess staff) : ControllerBase
+public sealed class AdminCategoriesController(MenuService menu) : ControllerBase
 {
-    // Shared service DI registration is reserved for T033; use existing dependencies until then.
-    private readonly MenuService menu = new(factory, staff);
-
     [HttpGet]
     [ProducesResponseType(typeof(CategoryResponse[]), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]

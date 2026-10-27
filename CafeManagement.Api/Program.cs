@@ -32,6 +32,7 @@ builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 builder.Services.AddScoped<StaffAccess>();
+builder.Services.AddScoped<MenuService>();
 builder.Services.AddOptions<PublicMenuOptions>()
     .Bind(builder.Configuration)
     .ValidateDataAnnotations()

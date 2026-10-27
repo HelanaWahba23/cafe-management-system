@@ -1,0 +1,150 @@
+@page "/admin/categories"
+@attribute [Authorize(Policy = "Admin")]
+@rendermode InteractiveServer
+@layout AdminLayout
+@using CafeManagement.Api.Application
+@using CafeManagement.Api.Contracts
+@inject MenuService Menu
+@inject AuthenticationStateProvider Authentication
+
+<PageTitle>Categories | Cafe Management</PageTitle>
+<h1>Categories</h1>
+@if (failure is not null)
+{
+    <div class="alert alert-danger" role="alert">@failure</div>
+}
+@if (notice is not null)
+{
+    <p role="status" class="text-success">@notice</p>
+}
+<button type="button" class="btn btn-outline-secondary mb-3" disabled="@(loading || saving)" @onclick="LoadAsync">Reload categories</button>
+@if (loading)
+{
+    <p role="status">Loading categories…</p>
+}
+else
+{
+    @if (categories.Length == 0)
+    {
+        <p>No categories to display.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <caption>Menu categories</caption>
+                <thead><tr><th scope="col">ID</th><th scope="col">Name</th><th scope="col">Actions</th></tr></thead>
+                <tbody>
+                    @foreach (var category in categories)
+                    {
+                        <tr><td>@category.Id</td><td>@category.Name</td><td><button type="button" class="btn btn-outline-primary" disabled="@saving" @onclick="() => EditAsync(category.Id)" aria-label="@($"Edit category {category.Id}: {category.Name}")">Edit</button></td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    <h2>@(editingId is null ? "Add category" : $"Edit category {editingId}")</h2>
+    <EditForm EditContext="editContext" OnSubmit="SaveAsync" FormName="category-editor">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="text-danger" />
+        <fieldset disabled="@saving" class="col-md-8 col-lg-6">
+            <legend class="visually-hidden">Category details</legend>
+            <label for="category-name" class="form-label">Name</label>
+            <InputText id="category-name" class="form-control" @bind-Value="model.Name" aria-describedby="category-name-error" />
+            <div id="category-name-error" class="text-danger"><ValidationMessage For="() => model.Name" /></div>
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                <button type="submit" class="btn btn-primary">@(saving ? "Saving…" : "Save category")</button>
+                <button type="button" class="btn btn-outline-secondary" @onclick="NewCategory">New category</button>
+            </div>
+        </fieldset>
+    </EditForm>
+}
+
+@code {
+    private CategoryResponse[] categories = [];
+    private CategoryEditModel model = new();
+    private EditContext editContext = default!;
+    private ValidationMessageStore messages = default!;
+    private int? editingId;
+    private bool loading = true, saving;
+    private string? failure, notice;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SetEditor(null, new());
+        await LoadAsync();
+    }
+
+    private void SetEditor(int? id, CategoryEditModel value)
+    {
+        editingId = id;
+        model = value;
+        editContext = new(model);
+        messages = new(editContext);
+    }
+
+    private void NewCategory()
+    {
+        if (saving || loading) return;
+        failure = notice = null;
+        SetEditor(null, new());
+    }
+
+    private async Task LoadAsync()
+    {
+        if (saving) return;
+        loading = true;
+        failure = null;
+        try
+        {
+            var result = await Menu.ListCategoriesAsync((await Authentication.GetAuthenticationStateAsync()).User);
+            if (result.Error is not null) failure = result.Error.Message;
+            else categories = result.Value!;
+        }
+        finally { loading = false; }
+    }
+
+    private async Task EditAsync(int id)
+    {
+        if (saving || loading) return;
+        loading = true;
+        failure = notice = null;
+        try
+        {
+            var result = await Menu.GetCategoryAsync((await Authentication.GetAuthenticationStateAsync()).User, id);
+            if (result.Error is not null) failure = result.Error.Message;
+            else SetEditor(result.Value!.Id, new() { Name = result.Value.Name });
+        }
+        finally { loading = false; }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (saving || loading) return;
+        failure = notice = null;
+        messages.Clear();
+        if (!editContext.Validate()) return;
+        saving = true;
+        try
+        {
+            var principal = (await Authentication.GetAuthenticationStateAsync()).User;
+            var result = editingId is null ? await Menu.CreateCategoryAsync(principal, model)
+                : await Menu.EditCategoryAsync(principal, editingId.Value, model);
+            if (result.Error is not null)
+            {
+                failure = result.Error.Message;
+                if (result.Error.FieldErrors is not null)
+                    foreach (var field in result.Error.FieldErrors)
+                        messages.Add(new FieldIdentifier(model, char.ToUpperInvariant(field.Key[0]) + field.Key[1..]), field.Value);
+                editContext.NotifyValidationStateChanged();
+                return;
+            }
+            SetEditor(result.Value!.Id, new() { Name = result.Value.Name });
+            notice = "Category saved.";
+            var list = await Menu.ListCategoriesAsync(principal);
+            if (list.Error is null) categories = list.Value!;
+            else failure = "The category was saved, but the list could not be refreshed. Reload categories.";
+        }
+        finally { saving = false; }
+    }
+}

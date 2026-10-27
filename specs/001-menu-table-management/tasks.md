@@ -545,10 +545,60 @@ All stories remain P1; sequence reflects implementation dependency, not a downgr
 checked without customer ordering or a populated menu. Full scan-to-menu acceptance intentionally
 waits for US3 and T051; do not claim the customer QR journey complete before that integration.
 
-- [ ] T036 [P] [US2] Define `CafeManagement.Api/Contracts/TableContracts.cs` for editable Label and read-only Id/PublicCode/menuUrl: "enforce ... label length 1–50 after trimming", nonblank, "Set NormalizedLabel from trimmed Label.ToUpperInvariant(); reject normalized length over 50" and immutable server-generated PublicCode; no client-editable normalization/code fields (after T024; FR-005/006/011).
-- [ ] T037 [US2] Implement Admin-protected table list/get/create/edit in `CafeManagement.Api/Application/TableService.cs` with per-operation factory contexts, trimmed display label/invariant normalized unique key and immutable random GUID code; precheck labels and map index race to duplicate_table_label conflict, retry a code collision without assigning an existing table's code (after T036; FR-001/004/005/006/011).
-- [ ] T038 [US2] Add `CafeManagement.Api/Application/TableQrService.cs` using QRCoder PngByteQRCode and StaffAccess, trusted configured HTTPS PublicWebBaseUrl plus `/menu/t/{publicCode}`, stable rendering after rename and repeated access, returning PNG bytes without stored images or unchecked Host-header URLs (after T037/T003; FR-001/005/006).
-- [ ] T039 [US2] Add `CafeManagement.Api/Controllers/AdminTablesController.cs` with authorized GET list/item/QR PNG plus POST/PUT table routes, antiforgery for writes, proper 201/200/404 and duplicate-label 409 mapping; no DELETE/deactivation/QR-rotation routes (after T038; FR-001/005/006/009/011).
+- [X] T036 [P] [US2] Define `CafeManagement.Api/Contracts/TableContracts.cs` for editable Label and read-only Id/PublicCode/menuUrl: "enforce ... label length 1–50 after trimming", nonblank, "Set NormalizedLabel from trimmed Label.ToUpperInvariant(); reject normalized length over 50" and immutable server-generated PublicCode; no client-editable normalization/code fields (after T024; FR-005/006/011).
+- [X] T037 [US2] Implement Admin-protected table list/get/create/edit in `CafeManagement.Api/Application/TableService.cs` with per-operation factory contexts, trimmed display label/invariant normalized unique key and immutable random GUID code; precheck labels and map index race to duplicate_table_label conflict, retry a code collision without assigning an existing table's code (after T036; FR-001/004/005/006/011).
+- [X] T038 [US2] Add `CafeManagement.Api/Application/TableQrService.cs` using QRCoder PngByteQRCode and StaffAccess, trusted configured HTTPS PublicWebBaseUrl plus `/menu/t/{publicCode}`, stable rendering after rename and repeated access, returning PNG bytes without stored images or unchecked Host-header URLs (after T037/T003; FR-001/005/006).
+- [X] T039 [US2] Add `CafeManagement.Api/Controllers/AdminTablesController.cs` with authorized GET list/item/QR PNG plus POST/PUT table routes, antiforgery for writes, proper 201/200/404 and duplicate-label 409 mapping; no DELETE/deactivation/QR-rotation routes (after T038; FR-001/005/006/009/011).
+
+### Table API execution evidence (T036–T039, 2026-10-27)
+
+- Confirmed T001–T035 complete, starting working tree clean and specification checklist 16/16.
+  Reviewed approved spec, plan, research, data model, API/UI contracts, quickstart and Constitution.
+  No extension hooks exist. Only T036–T039 were implemented; existing source remains unchanged.
+- T036: Added Label-only input/edit model, nonblank/trimmed and normalized length validation
+  (1–50), and a response containing Id/Label/PublicCode/MenuUrl. HTTP attempts to supply ID,
+  normalization or public code did not control persisted identity. No editable code/rotation field.
+- T037: Added Admin-protected list/get/create/edit with a fresh disposed factory context per
+  operation, invariant uppercase normalization and label prechecks. Existing SQL unique indexes
+  remain authoritative. Reviewed SQL 2601/2627 index-specific handling: label conflicts return
+  duplicate_table_label with field label; creation retries only proven PublicCode-index collisions
+  with a fresh entity/random GUID, at most three attempts. Existing codes are never reassigned.
+  The rare GUID-collision retry branch was inspected, not forced during live validation.
+- T038: QRCoder PngByteQRCode returns in-memory PNG bytes after TableService's current
+  Identity user/security-stamp/Admin check. Destinations use configured HTTPS PublicWebBaseUrl
+  and /menu/t/{publicCode}; no request Host/forwarding-header origin or saved image. Two PNGs
+  decoded to their distinct exact table URLs. A rename, repeated reads and a complete host restart
+  preserved codes/URLs and byte-identical PNG hashes. Forwarded-host/protocol tampering did not
+  change menuUrl. QR responses are image/png with no-store.
+- T039: GET list/item/QR, POST 201 with item Location and PUT 200 passed on the live HTTPS host.
+  Blank/whitespace/null/overlength labels returned 400; case/space duplicates and conflicting
+  edits returned safe 409 with duplicate_table_label/label. Rejected writes left rows unchanged.
+  Two simultaneous case-variant creates returned one 201 and one 409 with one persisted row.
+  Anonymous list/item/QR/create/edit returned 401; Cashier equivalents returned 403. Admin
+  POST/PUT with missing/invalid antiforgery returned 400. Invalid IDs returned 400, unknown
+  records/QR returned 404 and DELETE returned 405. No removal/deactivation/rotation endpoints.
+- Controller composition uses the already registered factory, StaffAccess and options to make
+  these API endpoints usable now. Shared TableService/TableQrService DI registration and switching
+  controller injection to those registrations remain T041 with component integration; Program.cs
+  and the navigation/layout were not changed ahead of that task.
+- Restore succeeded. dotnet build CafeManagement.sln --no-restore passed with 0 warnings and
+  0 errors (6.59 seconds). EF has-pending-model-changes reported no changes. Existing category/
+  product components/APIs, WeatherForecast's five records and Swagger/schema remained usable.
+  No migration, dependency update, account provisioning/reset or database recreation was needed.
+- Read-only before/after fingerprints confirmed all eight existing categories/products and the
+  two Identity accounts/password/security stamps/role memberships unchanged; two roles and one
+  migration remain. Retained only new labelled validation tables 1–3 (T039 1793069907131 and
+  T039 race 1793070101237); no records were deleted. Validation hosts were stopped afterward.
+- Used in-memory diagnostics/disposable browser sessions; no automated test files or project.
+  Node requests used a disposable diagnostic-context certificate override only. The installed
+  browser lacked BarcodeDetector; the isolated jsQR decoder initially encountered an upstream
+  404 and then a UMD-binding error. Corrected the diagnostic URL/binding and successfully decoded
+  both PNGs without adding an application dependency or weakening application HTTPS settings.
+  Decoder source: https://raw.githubusercontent.com/cozmo/jsQR/master/dist/jsQR.js,
+  SHA-256 3325b0888fa4745c4e6940897d8c4f426fbaae76901fcbfe1871a04e90a51655.
+- No application defects/blockers were found. The table component, public menu destination and
+  physical-phone scan journey are not implemented or claimed complete; T040 onward remain unchecked.
+
 - [ ] T040 [US2] Add `CafeManagement.Api/Components/Pages/Admin/Tables.razor` with Admin/Interactive Server, Bootstrap list/create/edit form, field conflict messages and inline authorized QR PNG/menu link preview; trusted circuit principal calls services directly, no rotation/print/download workflow (after T038; FR-001/005/006/009/011).
 - [ ] T041 [US2] Register table/QR services in `CafeManagement.Api/Program.cs`, connect the table page in `CafeManagement.Api/Components/Layout/AdminLayout.razor`, and build `CafeManagement.sln`; verify controller and component management agree on outputs/errors (after T039/T040; FR-005/006).
 - [ ] T042 [US2] Manually review `CafeManagement.Api/Components/Pages/Admin/Tables.razor` and `Controllers/AdminTablesController.cs`: distinct labels, blank/overlength/duplicate/case-space variants, label-update conflict, unknown ID, Admin-only read/write/QR access and denied CSRF writes; verify no failed change persisted (after T041; FR-001/004/005/008/011, SC-005/008).

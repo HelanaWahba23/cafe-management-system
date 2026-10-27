@@ -1,0 +1,52 @@
+@using System.Globalization
+@using CafeManagement.Api.Contracts
+@inject NavigationManager Navigation
+
+@if (Categories.Length == 0 || Categories.All(category => category.Products.Length == 0))
+{
+    <p role="status">No available products are currently listed.</p>
+}
+@if (Categories.Length > 0)
+{
+    <nav aria-label="Menu categories" class="mb-4">
+        <ul class="nav gap-2">
+            @foreach (var category in Categories)
+            {
+                <li class="nav-item"><a class="btn btn-outline-primary" href="@($"{Navigation.Uri.Split('#')[0]}#category-{category.Id}")" data-enhance-nav="false">@category.Name</a></li>
+            }
+        </ul>
+    </nav>
+    @foreach (var category in Categories)
+    {
+        <section class="card mb-3" aria-labelledby="@($"category-{category.Id}")" @key="category.Id">
+            <div class="card-body">
+                <h2 id="@($"category-{category.Id}")" class="h4" tabindex="-1">@category.Name</h2>
+                @if (category.Products.Length == 0)
+                {
+                    <p class="mb-0">No available products in this category.</p>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var product in category.Products)
+                        {
+                            <li class="list-group-item px-0 d-flex flex-wrap align-items-center justify-content-between gap-2" @key="product.Id">
+                                <span>@product.Name</span>
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <span class="fw-semibold">@Currency @product.Price.ToString("F2", CultureInfo.InvariantCulture)</span>
+                                    <button type="button" class="btn btn-outline-primary" aria-label="@($"Add {product.Name} to cart")" @onclick="() => OnAdd.InvokeAsync(product.Id)">Add to cart</button>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </section>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public PublicMenuCategory[] Categories { get; set; } = [];
+    [Parameter] public string Currency { get; set; } = "EGP";
+    [Parameter] public EventCallback<int> OnAdd { get; set; }
+}

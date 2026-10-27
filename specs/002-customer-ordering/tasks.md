@@ -3,7 +3,7 @@
 **Input**: Approved [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [API contract](contracts/api.md), [UI contract](contracts/ui.md),
 [quickstart.md](quickstart.md), requirements.md and Constitution v1.0.1.
-**Created**: 2026-10-27. **Status**: T001–T016 validated; T017–T063 not started.
+**Created**: 2026-10-27. **Status**: T001–T020 validated; T021–T063 not started.
 **Organization**: Setup → shared foundation → US1/US2/US3/US4 → cross-cutting validation.
 **Validation policy**: Restore/build and manual checks; no generated automated tests by default.
 Only an explicitly requested test or a concrete bug requiring diagnosis can justify an exception.
@@ -62,10 +62,10 @@ requires confirmed target/review/backup readiness from T003, not an assumed disp
 with duplicate names), adjust/remove, reject invalid quantities, and inspect exact EGP amounts;
 no order/payment/staff workflow is required. Empty and load-error feedback remain clear.
 
-- [ ] T017 [P] [US1] Create `CafeManagement.Api/Application/CartState.cs` as circuit-scoped data only: selected product IDs, positive whole int quantities, last displayed decimal prices, Type/TablePublicCode, one row per product ID, add/update/remove and checked exact line/total calculations; no static/shared tracked entities, customer credentials or durable-cart promise (after T016; parallel with T018; FR-001/002/006).
-- [ ] T018 [P] [US1] Create `CafeManagement.Api/Components/Shared/MenuCatalog.razor` reusing public catalog projections with available products, EGP/two-place prices, empty categories/menu and add callbacks by product ID; use same-document category links and accessible focus without requiring sign-in or rewriting existing service results (after T016; parallel with T017; FR-001/002/011/012).
-- [ ] T019 [US1] Create `CafeManagement.Api/Components/Shared/CartPanel.razor` using CartState for labeled quantity controls, explicit Remove, line amounts/total, empty state and field feedback; invalid zero/negative/fractional/overflow input is rejected and empty cart cannot request checkout (after T017/T018; FR-002/006/011).
-- [ ] T020 [US1] Integrate MenuCatalog and CartPanel into `CafeManagement.Api/Components/Pages/Menu/TableMenu.razor`, preserving `/menu/t/{PublicCode}`, correct visible table, invalid-link failure, latest-navigation-wins protection, available-only reads and existing QR identifiers; ordinary category browsing must not recreate the circuit or lose selections (after T019; FR-001/002/003/011/012).
+- [X] T017 [P] [US1] Create `CafeManagement.Api/Application/CartState.cs` as circuit-scoped data only: selected product IDs, positive whole int quantities, last displayed decimal prices, Type/TablePublicCode, one row per product ID, add/update/remove and checked exact line/total calculations; no static/shared tracked entities, customer credentials or durable-cart promise (after T016; parallel with T018; FR-001/002/006).
+- [X] T018 [P] [US1] Create `CafeManagement.Api/Components/Shared/MenuCatalog.razor` reusing public catalog projections with available products, EGP/two-place prices, empty categories/menu and add callbacks by product ID; use same-document category links and accessible focus without requiring sign-in or rewriting existing service results (after T016; parallel with T017; FR-001/002/011/012).
+- [X] T019 [US1] Create `CafeManagement.Api/Components/Shared/CartPanel.razor` using CartState for labeled quantity controls, explicit Remove, line amounts/total, empty state and field feedback; invalid zero/negative/fractional/overflow input is rejected and empty cart cannot request checkout (after T017/T018; FR-002/006/011).
+- [X] T020 [US1] Integrate MenuCatalog and CartPanel into `CafeManagement.Api/Components/Pages/Menu/TableMenu.razor`, preserving `/menu/t/{PublicCode}`, correct visible table, invalid-link failure, latest-navigation-wins protection, available-only reads and existing QR identifiers; ordinary category browsing must not recreate the circuit or lose selections (after T019; FR-001/002/003/011/012).
 - [ ] T021 [US1] Guard context-changing/full navigation in `CafeManagement.Api/Components/Pages/Menu/TableMenu.razor` and `CafeManagement.Api/Components/Shared/CartPanel.razor`: warn before clearing a nonempty unsubmitted cart and allow staying; keep displayed table/type accurate, no silent cross-table reassignment, and explain hard-reload cart loss without adding persistent cart storage (after T020; FR-002/003/004/011).
 - [ ] T022 [US1] Register CartState scoped in `CafeManagement.Api/Program.cs`; verify page-local interactive roots retain one cart while rendering the catalog/cart, two tabs do not share state, and existing static `CafeManagement.Api/Components/Routes.razor`/Identity authorization remain unchanged (after T021; FR-002/010/012).
 - [ ] T023 [US1] Run restore/build and manually validate all US1 scenarios, category focus/navigation, invalid quantities, duplicate names, empty/load failures and Admin regression using `specs/002-customer-ordering/quickstart.md`; record outcomes in `specs/002-customer-ordering/tasks.md`, confirming zero orders written (after T022; FR-001/002/006/011/012, SC-001/006/007).
@@ -482,3 +482,74 @@ authorized validated scope and never pre-existing unrelated edits or secrets.
   migrations, configuration and Feature 001 task history remain preserved. T014–T016 complete;
   T017–T063 remain unchecked and unimplemented. Feature 001 still has 54 complete tasks with
   only T051/T056 pending; it is not claimed fully accepted.
+
+### Shared menu and cart evidence (T017–T020, 2026-10-27)
+
+- Started from clean master at c20bf16ffd61239f39b618d6abe8a1beee5442c0, with exactly
+  T001–T016 complete and specification checklist 16/16. Reviewed the selected task definitions,
+  dependencies, approved specification/plan/contracts and Constitution. No implementation hooks
+  or additional repository instructions were found. Feature 001 history remains unchanged.
+- T017: Added Application/CartState.cs with immutable display-line values, one row per product
+  ID, positive int quantities, last displayed decimal prices/names, order type/table code,
+  add/update/remove and exact checked line/total calculations within decimal(18,2). Invalid
+  input or arithmetic/capacity failure leaves the accepted cart unchanged. No EF entities,
+  contacts, credentials, static/shared data, persistence or arbitrary cafe quantity cap.
+- In-memory manual checks passed for repeated additions, separate same-name product IDs,
+  exact 25.10 total, quantity edits/removal/empty state, maximum int quantity and add overflow,
+  exact maximum monetary value, line/total overflow atomicity, nonpositive/overprecision prices,
+  stable versus changed table context, independent instances and last-displayed-price refresh.
+  An initial PowerShell decimal-literal conversion rounded the diagnostic's maximum value;
+  corrected the diagnostic to invariant decimal string parsing. Application code was unchanged.
+  No test project/framework, automated test files or committed diagnostics were introduced.
+- T018: Added Components/Shared/MenuCatalog.razor using existing public category/product
+  projections, category/menu empty-state branches, EGP/two-place prices and add callbacks by
+  product ID. Category headings remain focusable. Links target the exact current document
+  plus category fragment, retaining query/path context and avoiding the root base-href trap.
+  Existing available-only SQL projection and public API contracts remain unchanged.
+- T019: Added Components/Shared/CartPanel.razor with associated quantity labels, explicit Remove,
+  displayed unit/line/total amounts, empty feedback, live amounts and field-specific accessible
+  errors. Zero, negative, fractional, empty/out-of-int-range text is rejected without changing
+  accepted values. The optional future review callback is hidden when unwired and guarded
+  against empty carts or unresolved quantity errors; no checkout flow is implemented.
+- T020: Integrated both components within the existing anonymous Interactive Server table page,
+  keeping /menu/t/{PublicCode}, PublicLayout, visible table, error/reload states and unchanged
+  latest-navigation-wins version guard. Page-owned CartState is shared within this root;
+  scoped DI registration remains T022. Same-table menu reload preserves selections; a different
+  context never silently transfers them. Navigation warning/full-reload explanation remain T021.
+  Program.cs, Routes.razor, authentication, table/QR services and database mappings are untouched.
+- Manual signed-out browser checks on an owned localhost-only HTTPS validation host passed:
+  four available products, existing empty categories, repeated additions giving quantity 2
+  and combined EGP 85.60, increase to 3 giving EGP 136.80, decrease/removal and empty feedback.
+  Actual keyboard edits of 0, -1, 1.5 and 2147483648 showed field feedback and retained accepted
+  amounts; corrected input cleared the error. Programmatic fill without a real change event
+  was replaced by real keyboard edits for this manual verification.
+- Category navigation retained quantity 2 and focused heading category-3 with no full reload;
+  subsequent interactive quantity controls worked. Reload menu preserved the same table/cart.
+  Invalid table link showed the existing safe error with no catalog/cart or pickup fallback;
+  a second existing table link displayed its correct label and an empty cart.
+- Browser inspection found and corrected two new-markup issues before completion: a literal
+  string component currency parameter and root-relative fragment resolution under Blazor's
+  base tag. Confirmed EGP display and same-document/focus/cart behavior after rebuilding.
+  Expected negotiation warnings occurred while the owned host was deliberately stopped for
+  that rebuild; a fresh signed-out session subsequently added a product with zero browser
+  warnings/errors. No certificate validation bypass or network changes were used.
+- Responsive browser screenshots and DOM measurements passed at 320/768/1280px. Document
+  widths were 305/753/1265px respectively (vertical scrollbar excluded), with no horizontal
+  page overflow. Menu/cart stack at narrow/tablet widths and use two columns at desktop;
+  labels, long existing names, prices and controls wrap within their cards. Temporary viewport
+  overrides were reset and all agent-created browser tabs/owned hosts were closed.
+- Existing API checks passed: four available public products, anonymous Admin category/product/
+  table collections and /api/auth/me return 401, malformed table API returns safe JSON 400,
+  menu no-store/no-referrer retained, Swagger and WeatherForecast return 200. Fully empty
+  catalog branch was code-reviewed/compiled; original catalog data was not altered to stage it.
+  Full US1 regression, navigation guards and DI/circuit lifetime acceptance remain T021–T023.
+- Before/after full-row SHA-256 fingerprints and row counts matched all 13 tables on both
+  CafeManagement and the owned CafeManagement_F002_Validation_20261027_134110_c57ad692 copy.
+  Existing records, accounts, roles, table public QR identifiers and both migrations are intact;
+  Orders/OrderLines stay empty. No database mutation/migration, account provisioning or reset.
+- Final restore/build passed with 0 warnings/0 errors (1.58 seconds); EF pending-model check
+  found no changes. Final scope/secret/artifact review includes only CartState.cs, MenuCatalog.razor,
+  CartPanel.razor, TableMenu.razor and this evidence. No dependency, automated test, checkout,
+  POS, payment, delivery, firewall/certificate or unrelated change.
+- T017–T020 complete. T021–T063 remain unchecked and unimplemented. Feature 001 remains at
+  54 completed tasks with only T051/T056 pending; no complete-feature acceptance is claimed.

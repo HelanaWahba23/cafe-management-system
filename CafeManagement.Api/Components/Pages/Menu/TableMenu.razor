@@ -2,7 +2,7 @@
 @attribute [AllowAnonymous]
 @rendermode InteractiveServer
 @layout PublicLayout
-@using System.Globalization
+@using CafeManagement.Api.Components.Shared
 @using CafeManagement.Api.Application
 @using CafeManagement.Api.Contracts
 @inject PublicMenuService Menu
@@ -20,45 +20,18 @@ else if (failure is not null)
 else if (menu is not null)
 {
     <p id="menu-table">Table: <strong>@menu.Table.Label</strong></p>
-    @if (menu.Categories.Length == 0 || menu.Categories.All(c => c.Products.Length == 0))
+    @if (addError is not null)
     {
-        <p role="status">No available products are currently listed.</p>
+        <div class="alert alert-danger" role="alert">@addError</div>
     }
-    @if (menu.Categories.Length > 0)
-    {
-        <nav aria-label="Menu categories" class="mb-4">
-            <ul class="nav gap-2">
-                @foreach (var category in menu.Categories)
-                {
-                    <li class="nav-item"><a class="btn btn-outline-primary" href="@($"/menu/t/{menu.Table.PublicCode:D}#category-{category.Id}")" data-enhance-nav="false">@category.Name</a></li>
-                }
-            </ul>
-        </nav>
-        @foreach (var category in menu.Categories)
-        {
-            <section class="card mb-3" aria-labelledby="@($"category-{category.Id}")">
-                <div class="card-body">
-                    <h2 id="@($"category-{category.Id}")" class="h4" tabindex="-1">@category.Name</h2>
-                    @if (category.Products.Length == 0)
-                    {
-                        <p class="mb-0">No available products in this category.</p>
-                    }
-                    else
-                    {
-                        <ul class="list-group list-group-flush">
-                            @foreach (var product in category.Products)
-                            {
-                                <li class="list-group-item px-0 d-flex flex-wrap justify-content-between gap-2">
-                                    <span>@product.Name</span>
-                                    <span class="fw-semibold text-nowrap">@menu.Currency @product.Price.ToString("F2", CultureInfo.InvariantCulture)</span>
-                                </li>
-                            }
-                        </ul>
-                    }
-                </div>
-            </section>
-        }
-    }
+    <div class="row g-3">
+        <div class="col-12 col-lg-8">
+            <MenuCatalog Categories="menu.Categories" Currency="@menu.Currency" OnAdd="AddProduct" />
+        </div>
+        <div class="col-12 col-lg-4">
+            <CartPanel Cart="cart" OnChanged="CartChanged" />
+        </div>
+    </div>
 }
 <button type="button" class="btn btn-outline-secondary" disabled="@loading" @onclick="LoadAsync">@(failure?.Kind == OperationErrorKind.Unexpected ? "Retry loading menu" : "Reload menu")</button>
 
@@ -68,6 +41,8 @@ else if (menu is not null)
     private OperationError? failure;
     private bool loading = true;
     private int loadVersion;
+    private readonly CartState cart = new();
+    private string? addError;
 
     protected override Task OnParametersSetAsync() => LoadAsync();
 
@@ -78,10 +53,26 @@ else if (menu is not null)
         loading = true;
         menu = null;
         failure = null;
+        addError = null;
         var result = await Menu.GetAsync(PublicCode);
         if (version != loadVersion) return;
         menu = result.Value;
         failure = result.Error;
+        if (menu is not null) cart.SetContext(CafeManagement.Api.Domain.OrderType.DineIn, menu.Table.PublicCode);
         loading = false;
     }
+
+    private void AddProduct(int productId)
+    {
+        var product = menu?.Categories.SelectMany(category => category.Products)
+            .SingleOrDefault(product => product.Id == productId);
+        if (loading || product is null)
+        {
+            addError = "This product is not available in the current menu. Reload the menu.";
+            return;
+        }
+        cart.TryAdd(product, out addError);
+    }
+
+    private void CartChanged() => addError = null;
 }

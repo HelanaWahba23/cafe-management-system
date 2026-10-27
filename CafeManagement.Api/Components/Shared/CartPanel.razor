@@ -1,0 +1,80 @@
+@using System.Globalization
+@using CafeManagement.Api.Application
+
+<section class="card mb-3" aria-labelledby="cart-heading">
+    <div class="card-body">
+        <h2 id="cart-heading" class="h4">Your cart</h2>
+        @if (Cart.Items.Count == 0)
+        {
+            <p role="status" class="mb-0">Your cart is empty. Add a product from the menu.</p>
+        }
+        @foreach (var item in Cart.Items)
+        {
+            <div class="border-bottom pb-3 mb-3" @key="item.ProductId">
+                <h3 class="h6">@item.ProductName</h3>
+                <p class="mb-2">Unit price: EGP @Money(item.UnitPrice)</p>
+                <div class="d-flex flex-wrap align-items-end gap-2 mb-2">
+                    <div>
+                        <label class="form-label" for="@($"cart-quantity-{item.ProductId}")">Quantity for @item.ProductName</label>
+                        <input id="@($"cart-quantity-{item.ProductId}")" class="form-control" style="max-width: 8rem;" type="text" inputmode="numeric" pattern="[0-9]*"
+                               value="@QuantityText(item)" aria-invalid="@(errors.ContainsKey(item.ProductId) ? "true" : "false")"
+                               aria-describedby="@(errors.ContainsKey(item.ProductId) ? $"cart-error-{item.ProductId}" : null)"
+                               @onchange="args => ChangeQuantityAsync(item.ProductId, args)" />
+                    </div>
+                    <button type="button" class="btn btn-outline-danger" aria-label="@($"Remove {item.ProductName} from cart")" @onclick="() => RemoveAsync(item.ProductId)">Remove</button>
+                </div>
+                @if (errors.TryGetValue(item.ProductId, out var error))
+                {
+                    <p id="@($"cart-error-{item.ProductId}")" class="text-danger" role="alert">@error</p>
+                }
+                <p class="mb-0" aria-live="polite">Line total: <strong>EGP @Money(item.LineTotal)</strong></p>
+            </div>
+        }
+        @if (Cart.Items.Count > 0)
+        {
+            <p class="fw-semibold mb-0" aria-live="polite">Total: EGP @Money(Cart.Total)</p>
+        }
+        @if (OnCheckoutRequested.HasDelegate)
+        {
+            <button type="button" class="btn btn-primary mt-3" disabled="@(Cart.Items.Count == 0 || errors.Count > 0)" @onclick="RequestCheckoutAsync">Review order</button>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public CartState Cart { get; set; } = null!;
+    [Parameter] public EventCallback OnChanged { get; set; }
+    [Parameter] public EventCallback OnCheckoutRequested { get; set; }
+    private readonly Dictionary<int, string> errors = [];
+    private readonly Dictionary<int, string> input = [];
+
+    private static string Money(decimal value) => value.ToString("F2", CultureInfo.InvariantCulture);
+    private string QuantityText(CartItem item) => input.GetValueOrDefault(item.ProductId, item.Quantity.ToString(CultureInfo.InvariantCulture));
+
+    private async Task ChangeQuantityAsync(int productId, ChangeEventArgs args)
+    {
+        var text = args.Value?.ToString() ?? string.Empty;
+        input[productId] = text;
+        if (!int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var quantity) || quantity <= 0)
+            errors[productId] = "Enter a positive whole quantity within the supported range, or use Remove.";
+        else if (!Cart.TryUpdateQuantity(productId, quantity, out var error))
+            errors[productId] = error!;
+        else
+        {
+            errors.Remove(productId);
+            input.Remove(productId);
+        }
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task RemoveAsync(int productId)
+    {
+        Cart.Remove(productId);
+        errors.Remove(productId);
+        input.Remove(productId);
+        await OnChanged.InvokeAsync();
+    }
+
+    private Task RequestCheckoutAsync() => Cart.Items.Count > 0 && errors.Count == 0
+        ? OnCheckoutRequested.InvokeAsync() : Task.CompletedTask;
+}

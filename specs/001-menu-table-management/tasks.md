@@ -196,11 +196,62 @@ management and public browsing, so their shared schema belongs here rather than 
   database writes, role/account creation, login pages or Blazor UI implementation occurred.
   Live SQL constraint enforcement and full authentication/circuit behavior remain later checks.
 
-- [ ] T011 Generate and inspect the initial migration named `InitialMenuAndIdentity` and `CafeDbContextModelSnapshot.cs` in `CafeManagement.Api/Infrastructure/Persistence/Migrations/`; use the pinned tool, review SQL/Down migration against `data-model.md`, and verify only Identity plus the three domain tables and required constraints are introduced (after T010; FR-004/011).
-- [ ] T012 Confirm the dedicated CafeManagement database target and connection secrets, then apply the reviewed migration from `CafeManagement.Api/Infrastructure/Persistence/Migrations/` using the commands in `specs/001-menu-table-management/quickstart.md`; verify tables/indexes/FK/checks and record the verified target here without credentials; do not drop/change an unrelated database or auto-migrate normal startup (after T011; Constitution IV).
-- [ ] T013 Add operator-only `--bootstrap-user` handling in `CafeManagement.Api/Infrastructure/Identity/IdentityBootstrapper.cs` and `CafeManagement.Api/Program.cs`; use secret Bootstrap options, UserManager password hashing and role services to create only missing roles/supplied account, exit afterward, never reset/promote existing users silently, then provision local Admin and a separate Cashier for access checks (after T012; FR-001).
-- [ ] T014 Implement the small trusted staff check in `CafeManagement.Api/Application/StaffAccess.cs`: require authenticated server principal plus current Identity user/security stamp/Admin membership in a newly disposed service scope; accept no roles/principal from browser payload and retain no scoped Identity store across circuit actions; verify its failure outcomes are usable by HTTP and component callers (after T013; FR-001).
-- [ ] T015 [P] Add `CafeManagement.Api/Infrastructure/Identity/IdentityRevalidatingAuthenticationStateProvider.cs` using the .NET 8 Identity revalidation pattern with short Identity scopes; invalidate stale circuit authentication without claiming immediate cross-tab logout, and never use retained HttpContext/UserManager/DbContext from interactive components (after T013; FR-001).
+- [X] T011 Generate and inspect the initial migration named `InitialMenuAndIdentity` and `CafeDbContextModelSnapshot.cs` in `CafeManagement.Api/Infrastructure/Persistence/Migrations/`; use the pinned tool, review SQL/Down migration against `data-model.md`, and verify only Identity plus the three domain tables and required constraints are introduced (after T010; FR-004/011).
+- [X] T012 Confirm the dedicated CafeManagement database target and connection secrets, then apply the reviewed migration from `CafeManagement.Api/Infrastructure/Persistence/Migrations/` using the commands in `specs/001-menu-table-management/quickstart.md`; verify tables/indexes/FK/checks and record the verified target here without credentials; do not drop/change an unrelated database or auto-migrate normal startup (after T011; Constitution IV).
+- [X] T013 Add operator-only `--bootstrap-user` handling in `CafeManagement.Api/Infrastructure/Identity/IdentityBootstrapper.cs` and `CafeManagement.Api/Program.cs`; use secret Bootstrap options, UserManager password hashing and role services to create only missing roles/supplied account, exit afterward, never reset/promote existing users silently, then provision local Admin and a separate Cashier for access checks (after T012; FR-001).
+- [X] T014 Implement the small trusted staff check in `CafeManagement.Api/Application/StaffAccess.cs`: require authenticated server principal plus current Identity user/security stamp/Admin membership in a newly disposed service scope; accept no roles/principal from browser payload and retain no scoped Identity store across circuit actions; verify its failure outcomes are usable by HTTP and component callers (after T013; FR-001).
+- [X] T015 [P] Add `CafeManagement.Api/Infrastructure/Identity/IdentityRevalidatingAuthenticationStateProvider.cs` using the .NET 8 Identity revalidation pattern with short Identity scopes; invalidate stale circuit authentication without claiming immediate cross-tab logout, and never use retained HttpContext/UserManager/DbContext from interactive components (after T013; FR-001).
+
+### Migration and staff security evidence (T011–T015, 2026-10-27)
+
+- Verified T001–T010 complete, clean starting Git state and 16/16 passing requirements checklist.
+  Reviewed exact dependencies and approved specification/plan/model/contracts/Constitution.
+- T011: Pinned EF tool 8.0.33 generated 20261027013745_InitialMenuAndIdentity, its designer and
+  CafeDbContextModelSnapshot. Reviewed Up/Down plus forward/rollback SQL offline. Only seven
+  standard Identity tables and MenuCategories/Products/CafeTables are added, with approved
+  column types, required fields, checks, FK and indexes. Rollback drops only these feature tables;
+  no rollback was executed. has-pending-model-changes reports no model/snapshot differences.
+- T012: User explicitly confirmed localhost\MSSQLSERVER01/CafeManagement with Windows integrated
+  authentication. Read-only preflight confirmed that database did not exist. Stored the local
+  connection setting only in the existing external development user-secrets store and applied
+  the reviewed migration successfully. Encrypt=True/TrustServerCertificate=True is restricted
+  to this local development connection, not committed configuration or production guidance.
+  Verified the migration history entry, ten feature/Identity tables plus EF history, all five
+  enabled/trusted check constraints, unique normalized-label/public-code indexes and Products
+  category FK with NO_ACTION. No unrelated database or existing application data was changed.
+- T013: Added explicit --bootstrap-user mode that exits without starting HTTP hosting, validates
+  supplied options, creates missing Admin/Cashier roles and the supplied new account via Identity,
+  and uses a transaction for role/user/membership writes. Existing accounts are never reset or
+  promoted; existing-role mismatch fails safely. Normal startup never migrates or provisions.
+  User explicitly approved random local development credentials. Provisioned one Admin and one
+  separate Cashier; passwords are outside the repository under local user-secret keys
+  LocalDevelopmentAccounts:Admin:Password and LocalDevelopmentAccounts:Cashier:Password, with
+  corresponding Email keys. Bootstrap credentials existed only in child-process environments
+  during provisioning and were cleared afterward. No passwords were printed or committed.
+  Missing options returned exit 1 without hosting. Repeat runs succeeded without changing account
+  count/password-hash/security-stamp fingerprints; an existing-account role mismatch returned
+  exit 1 with no account mutation. Identity password verification succeeded for both accounts.
+- T014: StaffAccess returns Allowed/Unauthenticated/Forbidden for HTTP/component adapters and
+  uses a new async Identity scope for every authenticated operation. Actual host service checks
+  allowed current Admin, rejected anonymous/Cashier/stale stamp and rejected a Cashier principal
+  with an added Admin role claim, proving membership is checked against the database. No request
+  payload/role is accepted as authoritative, and no Identity store/context is retained.
+- T015: Added the .NET 8 RevalidatingServerAuthenticationStateProvider pattern with a 30-minute
+  interval and fresh Identity scope per security-stamp check. Direct service checks accepted
+  the current stamp and rejected stale/unknown identity. No browser/circuit integration or
+  immediate cross-tab logout guarantee is claimed; host registration and UI integration remain
+  T020 and full circuit behavior remains later validation. Validation commands initially loaded
+  SQL Client's reference assembly and used shallow principal copies; correcting the command's
+  Windows runtime assembly and independent identities resolved these diagnostic-command issues.
+- dotnet restore CafeManagement.sln passed; final dotnet build CafeManagement.sln --no-restore
+  passed with 0 warnings and 0 errors (2.23 seconds). Model/snapshot check passed. Ordinary HTTPS
+  Development startup preserved WeatherForecast (200/five records), Swagger UI (200) and OpenAPI
+  documentation, without bypassing certificate validation. Validation web host stopped.
+- No automated test files, extra dependencies, entity/configuration changes, new business features
+  or tasks beyond T015. No extension hook file exists. Credentials, local configuration, database
+  files and build artifacts remain outside the commit; only reviewed source/migrations/task evidence
+  are intended for Git. T016 onward remains unstarted.
+
 - [ ] T016 [P] Add `CafeManagement.Api/Controllers/AuthController.cs` with authenticated GET `/api/auth/me` returning email/roles and no-store GET `/api/auth/antiforgery` returning requestToken plus framework cookie; configure RequestVerificationToken consistently and keep authentication cookie HttpOnly; no public registration or JSON login endpoint (after T010; `contracts/api.md` session contract).
 - [ ] T017 [P] Add `CafeManagement.Api/Pages/Account/Login.cshtml` and `Login.cshtml.cs` for ordinary HTTP GET/POST email/password login with antiforgery, generic credential/lockout failure, safe local returnUrl and full redirect after SignInManager cookie issuance; use Admin default `/admin/categories`, authenticated non-admin denial, and no client role selector/registration (after T013; FR-001).
 - [ ] T018 [P] Add `CafeManagement.Api/Pages/Account/Logout.cshtml` and `Logout.cshtml.cs` for authenticated antiforgery-protected POST logout with cleared cookie and full redirect to login; forbid GET sign-out and do not perform cookie mutations from interactive handlers (after T013; FR-001).

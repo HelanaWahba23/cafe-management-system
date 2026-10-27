@@ -1,4 +1,5 @@
 using CafeManagement.Api.Infrastructure.Persistence;
+using CafeManagement.Api.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,6 +21,29 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+// Operator-only command: never run provisioning during ordinary web startup.
+if (args.Contains("--bootstrap-user", StringComparer.Ordinal))
+{
+    try
+    {
+        await using var scope = app.Services.CreateAsyncScope();
+        var options = builder.Configuration.GetSection(BootstrapOptions.SectionName)
+            .Get<BootstrapOptions>() ?? new BootstrapOptions();
+        var result = await IdentityBootstrapper.RunAsync(scope.ServiceProvider, options);
+        Console.WriteLine(result.Succeeded ? "Bootstrap completed." : "Bootstrap failed; check local configuration and account role.");
+        Environment.ExitCode = result.Succeeded ? 0 : 1;
+    }
+    catch
+    {
+        // Do not disclose configuration, credentials or raw database exceptions.
+        Console.Error.WriteLine("Bootstrap failed; verify the dedicated database and local configuration.");
+        Environment.ExitCode = 1;
+    }
+
+    await app.DisposeAsync();
+    return;
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

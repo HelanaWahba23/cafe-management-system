@@ -3,7 +3,7 @@
 **Input**: Approved [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [API contract](contracts/api.md), [UI contract](contracts/ui.md),
 [quickstart.md](quickstart.md), requirements.md and Constitution v1.0.1.
-**Created**: 2026-10-27. **Status**: T001–T013 validated; T014–T063 not started.
+**Created**: 2026-10-27. **Status**: T001–T016 validated; T017–T063 not started.
 **Organization**: Setup → shared foundation → US1/US2/US3/US4 → cross-cutting validation.
 **Validation policy**: Restore/build and manual checks; no generated automated tests by default.
 Only an explicitly requested test or a concrete bug requiring diagnosis can justify an exception.
@@ -51,9 +51,9 @@ requires confirmed target/review/backup readiness from T003, not an assumed disp
 - [X] T011 Add Orders/OrderLines to `CafeManagement.Api/Infrastructure/Persistence/CafeDbContext.cs` and apply the two new configurations; verify existing DbSets, Identity mapping, product/table schemas and context-factory registration remain intact; build the solution (after T008–T010; FR-005/012).
 - [X] T012 Generate one additive AddCustomerOrders migration in `CafeManagement.Api/Infrastructure/Persistence/Migrations/` after `20261027013745_InitialMenuAndIdentity`, including generated `*_AddCustomerOrders.cs`, designer and `CafeDbContextModelSnapshot.cs`; generate reviewed SQL to ignored `artifacts/customer-orders.sql`, record exact generated paths in this file, and stop on any unintended existing table/data/Identity alteration, reset or migration rewrite (after T011; FR-005/012, Constitution II/IV).
 - [X] T013 Apply the reviewed migration only to the confirmed authorized target(s) after T003 safety gates; verify new tables/indexes/checks/FKs and original catalog/table/QR/Identity fingerprints, and record outcomes in `specs/002-customer-ordering/tasks.md`; no EnsureCreated/EnsureDeleted, startup migration, account provisioning, reseeding, destructive downgrade or QR regeneration (after T012; FR-005/012, Constitution II/IV).
-- [ ] T014 Define `CafeManagement.Api/Contracts/OrderContracts.cs` with OrderDraft, item, ReviewedPrice, Review, placement result and minimal Tracking shapes from `contracts/api.md`; enforce name/phone trimmed nonblank capacities 120/40, nonempty unique product IDs, positive whole int quantities, valid DineIn table UUID versus Pickup null/absent, exactly matching reviewed-price IDs and invariant positive two-place EGP strings; reject overflow/overprecision, prohibited/unknown write fields and truncation; no regional phone/account/quantity policy or contact fields in responses (after T013; FR-002–FR-010/013).
-- [ ] T015 Configure only new order HTTP route protections in `CafeManagement.Api/Program.cs`: named configurable remote-IP fixed-window limiter initially 60 requests/minute, queue 0 and Retry-After; correct routing/middleware order; no-store/no-referrer for `/menu/t/*`, `/menu/pickup`, `/orders/track` and no-store order APIs; verify diagnostic configuration does not log bearer/body/contact/hash data; preserve Identity/CORS/antiforgery/original route behavior (after T014; FR-009/010/011/012/013).
-- [ ] T016 Run restore/build and inspect registered schema/value contracts without introducing new dependencies; manually verify SQL field capacities, unique digests/references, FK/type/reason/price/quantity checks and unchanged existing records on the isolated target; record results and limitations in `specs/002-customer-ordering/tasks.md` (after T015; FR-005/006/007/008/012, Constitution VI).
+- [X] T014 Define `CafeManagement.Api/Contracts/OrderContracts.cs` with OrderDraft, item, ReviewedPrice, Review, placement result and minimal Tracking shapes from `contracts/api.md`; enforce name/phone trimmed nonblank capacities 120/40, nonempty unique product IDs, positive whole int quantities, valid DineIn table UUID versus Pickup null/absent, exactly matching reviewed-price IDs and invariant positive two-place EGP strings; reject overflow/overprecision, prohibited/unknown write fields and truncation; no regional phone/account/quantity policy or contact fields in responses (after T013; FR-002–FR-010/013).
+- [X] T015 Configure only new order HTTP route protections in `CafeManagement.Api/Program.cs`: named configurable remote-IP fixed-window limiter initially 60 requests/minute, queue 0 and Retry-After; correct routing/middleware order; no-store/no-referrer for `/menu/t/*`, `/menu/pickup`, `/orders/track` and no-store order APIs; verify diagnostic configuration does not log bearer/body/contact/hash data; preserve Identity/CORS/antiforgery/original route behavior (after T014; FR-009/010/011/012/013).
+- [X] T016 Run restore/build and inspect registered schema/value contracts without introducing new dependencies; manually verify SQL field capacities, unique digests/references, FK/type/reason/price/quantity checks and unchanged existing records on the isolated target; record results and limitations in `specs/002-customer-ordering/tasks.md` (after T015; FR-005/006/007/008/012, Constitution VI).
 
 ## Phase 3: US1 — Review a Cart from the Current Menu (P1, T017–T023)
 
@@ -413,3 +413,72 @@ authorized validated scope and never pre-existing unrelated edits or secrets.
   and ignore/secret boundaries; build outputs and SQL artifacts stay excluded.
 - T009–T013 are complete. T014–T063 remain unchecked and were not implemented. No cart,
   ordering API/UI, POS, payments, delivery, network, certificate or package changes.
+
+### Value contracts and HTTP security foundation evidence (T014–T016, 2026-10-27)
+
+- Started from clean master at 7ba0d7f70e8e111c46b5a0ea2eb1d18ed4b87d93 with exactly
+  T001–T013 complete. Reviewed the selected task definitions/dependencies, approved spec,
+  planning/contracts, requirements and Constitution. Specification checklist remains 16/16.
+  No additional repository instructions or implementation extension hooks were present.
+- T014: Added Contracts/OrderContracts.cs with OrderDraft, OrderDraftItem, ReviewedPrice,
+  OrderPlacementInput, review/table/item projections, minimal tracking/item projections and
+  placement result. Guest fields are trimmed, nonblank and limited to 120/40 characters
+  without truncation or regional formatting rules. DineIn requires a nonempty UUID and
+  Pickup rejects non-null table context. Items require distinct positive IDs and positive
+  int quantities; JSON numbers must be whole and within int range.
+- Reviewed prices require positive invariant two-place strings within decimal(18,2), with
+  exactly matching product IDs and no duplicates/extras. Write DTOs reject unmapped JSON
+  properties locally, preserving all existing API serializer behavior. Direct draft/placement
+  validation shares the same rules for later service/component calls. Database existence,
+  availability and authoritative calculations remain the later OrderService tasks.
+- All 51 in-memory manual JSON/value examples passed: valid pickup/dine-in, required fields,
+  trim/Unicode whitespace, 120/121 and 40/41 boundaries, null/empty/duplicate items, positive/
+  fractional/overflow/string quantities, UUID/context rules, matching reviewed IDs and
+  exact price formatting/capacity, and unknown/prohibited root/nested fields. Inspected all
+  six public response shapes: no contact fields, internal order/table IDs, digest, rowversion,
+  Identity data or credential. Product IDs remain permitted in review; trackingPath is fixed
+  to the token-free /orders/track. A PowerShell assembly-resolution issue in the initial
+  diagnostic was corrected in memory; no application defect or test file was involved.
+- T015: Added named opt-in GuestOrders fixed-window HTTP policy in Program.cs. Initial
+  setting is 60 permits per minute per actual remote IP, queue zero; GuestOrders:PermitLimit
+  is configurable and must be positive. Rejection callback supplies 429 ProblemDetails and
+  invariant whole-second Retry-After. No global limiter, forwarded-IP trust, new auth scheme,
+  permissive CORS or change to existing Identity/antiforgery policy.
+- Explicit routing precedes authentication/rate limiting/authorization/antiforgery. Middleware
+  sets no-store/no-referrer for /menu/t/*, /menu/pickup and /orders/track, and no-store for
+  /api/orders responses, including safe failures. OnStarting preserves these headers if
+  downstream error handling clears the response. Prefix boundaries do not capture unrelated
+  paths. Existing JSON error behavior and global router are unchanged.
+- Started and stopped one owned loopback-only HTTPS host at https://localhost:7246 against
+  the existing owned validation database using process-only overrides. Existing certificate
+  validation succeeded normally; no certificate/firewall/network/configuration file changes.
+  Verified anonymous table API/document browsing, header behavior on existing/future paths
+  and failures, case/trailing slash matching, unrelated prefix paths, existing Swagger,
+  antiforgery token plus Secure/HttpOnly cookie, /api/auth/me 401, and all three Admin API
+  collections 401 when signed out. Sixty-five WeatherForecast reads all returned 200,
+  confirming existing endpoints were not globally rate-limited.
+- Inspected diagnostic configuration: no HTTP body/header or EF sensitive-data logging
+  enabled. Synthetic non-secret bearer/contact/body markers sent to the unimplemented order
+  path did not appear in host logs. Log files are ignored artifacts only.
+- Limits of this foundation check: no order endpoints, service, cart or UI exist yet. Applying
+  GuestOrders to those routes and real endpoint-level 429/Retry-After, guest CSRF, availability,
+  price-reconfirmation and placement/tracking checks remain T024–T042 (especially T033/T040).
+  The prepared policy/callback was reviewed; no claim of an exercised order HTTP limiter.
+  Signed-in full workflow regression remains later story validation; no original login/account
+  state was changed merely to demonstrate access.
+- T016: Inspected the isolated installed schema: 13 enabled/trusted checks, three restrictive
+  NO ACTION FKs, six secondary indexes with expected uniqueness, required rowversion and all
+  three decimal(18,2) money columns. Verified exact type/length/nullability for 12 selected
+  name/phone/table/reason/type/status/currency/hash/reference/quantity fields. Existing physical
+  checks/constraints match the reviewed migration validated in T013; no migration was added.
+- Before/after counts and full-row SHA-256 fingerprints matched all 13 tables on both
+  CafeManagement and CafeManagement_F002_Validation_20261027_134110_c57ad692, including the
+  existing catalog, table/QR records, Identity accounts/roles and both migration entries.
+  Orders/OrderLines remain empty. No database mutation/reset, provisioning or QR regeneration.
+- Final solution restore and build passed: 0 warnings/0 errors (1.55 seconds).
+  EF has-pending-model-changes passed. No package changes, test projects, automated tests,
+  POS, payments, delivery, production settings or unrelated features were added.
+- Only OrderContracts.cs, Program.cs and this task evidence change. Existing entities,
+  migrations, configuration and Feature 001 task history remain preserved. T014–T016 complete;
+  T017–T063 remain unchecked and unimplemented. Feature 001 still has 54 complete tasks with
+  only T051/T056 pending; it is not claimed fully accepted.

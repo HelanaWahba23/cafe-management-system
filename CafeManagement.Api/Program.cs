@@ -7,6 +7,9 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Globalization;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +26,33 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>()
 builder.Services.AddControllers();
 builder.Services.Configure<ApiBehaviorOptions>(options =>
     options.InvalidModelStateResponseFactory = ApiErrors.InvalidModelState);
+
+var guestOrderPermitLimit = builder.Configuration.GetValue("GuestOrders:PermitLimit", 60);
+if (guestOrderPermitLimit <= 0)
+    throw new InvalidOperationException("GuestOrders:PermitLimit must be positive.");
+builder.Services.AddRateLimiter(options =>
+{
+    // Opt-in only: applied to the new guest order endpoints when those endpoints are added.
+    options.AddPolicy("GuestOrders", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = guestOrderPermitLimit,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var delay)
+            ? Math.Max(1, (int)Math.Ceiling(delay.TotalSeconds)) : 60;
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        context.HttpContext.Response.Headers.RetryAfter = retryAfter.ToString(CultureInfo.InvariantCulture);
+        await context.HttpContext.Response.WriteAsJsonAsync(ApiErrors.ForStatus(429),
+            options: (System.Text.Json.JsonSerializerOptions?)null,
+            contentType: "application/problem+json", cancellationToken: cancellationToken);
+    };
+});
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -100,6 +130,25 @@ if (args.Contains("--bootstrap-user", StringComparer.Ordinal))
 }
 
 // Configure the HTTP request pipeline.
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path;
+    var documentPath = path.Value?.TrimEnd('/');
+    var privateDocument = path.StartsWithSegments("/menu/t")
+        || string.Equals(documentPath, "/menu/pickup", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(documentPath, "/orders/track", StringComparison.OrdinalIgnoreCase);
+    if (privateDocument || path.StartsWithSegments("/api/orders"))
+    {
+        // OnStarting also preserves these headers when downstream error handling clears a response.
+        context.Response.OnStarting(() =>
+        {
+            context.Response.Headers.CacheControl = "no-store";
+            if (privateDocument) context.Response.Headers["Referrer-Policy"] = "no-referrer";
+            return Task.CompletedTask;
+        });
+    }
+    await next(context);
+});
 app.UseWhen(context => context.Request.Path.StartsWithSegments("/api"), api =>
 {
     api.Use(async (context, next) =>
@@ -136,7 +185,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+app.UseRouting();
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 app.UseAntiforgery();
 

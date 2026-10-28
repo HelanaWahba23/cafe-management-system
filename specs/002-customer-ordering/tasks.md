@@ -3,7 +3,7 @@
 **Input**: Approved [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [API contract](contracts/api.md), [UI contract](contracts/ui.md),
 [quickstart.md](quickstart.md), requirements.md and Constitution v1.0.1.
-**Created**: 2026-10-27. **Status**: T001–T020, T024–T033 and T043–T044 validated; browser/integration gates pending.
+**Created**: 2026-10-27. **Status**: T001–T020, T024–T033, T041 and T043–T044 validated; browser/integration gates pending.
 **Organization**: Setup → shared foundation → US1/US2/US3/US4 → cross-cutting validation.
 **Validation policy**: Restore/build and manual checks; no generated automated tests by default.
 Only an explicitly requested test or a concrete bug requiring diagnosis can justify an exception.
@@ -98,7 +98,7 @@ existing page with tracking refinements and complete status/security validation.
 - [ ] T038 [US2] Create a minimal functional `CafeManagement.Api/Components/Pages/Orders/TrackOrder.razor` at `/orders/track` with PublicLayout/Interactive Server and extend the already-loaded `CafeManagement.Api/wwwroot/js/order-session.js` for after-render fragment validation, separate active-tracking storage and fragment removal; use T029 to show saved reference/type/table snapshot/items/EGP total/current status and rejection reason when applicable, same-tab reload and safe missing/invalid/unknown/load-error outcomes without registration, prerendered private data, contact fields or fallback lookup; preserve any pending attempt and verify a freshly opened checkout link resolves its matching order before US2 completion (after T037/T029/T033/T034; FR-007/008/009/010/011/013).
 - [ ] T039 [US2] Extend `CafeManagement.Api/wwwroot/js/reconnect-status.js` submit protection to order write forms while preserving Admin guards/inert/reload behavior; mark checkout forms in `CafeManagement.Api/Components/Shared/CheckoutPanel.razor`, verify the T034 bootstrap remains unchanged and server busy guards/service checks authoritative, exercise T037's explicit read-only recovery after reload, and never auto-replay writes (after T038; FR-007/010/011/012).
 - [ ] T040 [US2] Manually validate review/place/recovery HTTP contracts and equivalent direct component checks using `specs/002-customer-ordering/contracts/api.md`: missing/invalid/mispaired CSRF rejection, correct pair, malformed input/bearer, unknown fields, price/total/status/role/table-ID tampering, generic failures and unavailable filtering; record safe outcomes in `specs/002-customer-ordering/tasks.md` (after T039; FR-003/005/006/009/010/013, SC-003/004/005).
-- [ ] T041 [US2] On the owned validation target exercise `CafeManagement.Api/Application/OrderService.cs` with parallel same-capability submissions, changed-intent conflicts, price/availability edits versus transaction locks, rollback/no partial lines, numeric overflow, lost-success-response recovery and restart/historical snapshot checks; record actual row counts and preservation results in `specs/002-customer-ordering/tasks.md`, never alter original records (after T040; FR-005/006/007/012, SC-003/004/007).
+- [X] T041 [US2] On the owned validation target exercise `CafeManagement.Api/Application/OrderService.cs` with parallel same-capability submissions, changed-intent conflicts, price/availability edits versus transaction locks, rollback/no partial lines, numeric overflow, lost-success-response recovery and restart/historical snapshot checks; record actual row counts and preservation results in `specs/002-customer-ordering/tasks.md`, never alter original records (after T040; FR-005/006/007/012, SC-003/004/007).
 - [ ] T042 [US2] Run restore/build and manually complete US2 scenarios for two distinct existing table links, required guest details, price increase/decrease/rechange with explicit confirmation and correct saved associations; open each checkout-provided private link in a fresh signed-out browser to T038's working page, verify matching saved details/Submitted status, reload and negative missing/invalid-link privacy outcomes without any US4 work; use `specs/002-customer-ordering/quickstart.md` and record evidence here, with physical scans pending if HTTPS reachability is unavailable (after T041/T038/T039; FR-003/005/006/007/008/009/010/011/013, SC-002/003/004/005/006/008).
 
 ## Phase 5: US3 — Place an Online Pickup Order (P1, T043–T048)
@@ -664,3 +664,45 @@ authorized validated scope and never pre-existing unrelated edits or secrets.
   diagnostics passed storage failure/canonical capability/metadata separation/fragment/link
   checks; HTTP confirmed helper delivery/order and credential-free prerender shells. These
   are not substituted for actual interactive browser checks.
+
+### Independent deep backend validation and UI handoff (T041; partial later gates, 2026-10-29)
+
+- Under the user's explicit independent-work instruction, T041's backend-only diagnostic
+  matrix was exercised without claiming T040's component checks passed. Price and availability
+  edits on the owned copy held placement reads until commit; acceptance then returned the
+  current price_changed/product_unavailable result without stale acceptance or partial rows.
+- Failure injection after the actual SQL order-header INSERT rolled back the header/lines.
+  A separate interceptor threw only after commit: placement reported uncertain, capability-only
+  tracking found the committed order, and explicit unchanged retry replayed that saved reference.
+  Parallel duplicate attempts still produced one order, changed intent conflicted, actual
+  line overflow was rejected, and historical table/product snapshots survived copy catalog edits.
+- All five saved status/reason projections passed. Two isolated future-writer-style contexts
+  proved rowversion rejects the stale update. Each complete backend run created four diagnostic
+  orders/lines (Pickup, DineIn, concurrent winner and lost-response order), restored all edited
+  copy fixture values and removed only recorded diagnostic references. Orders/OrderLines returned
+  to 0/0; combined full-row fingerprints of all 13 tables matched before/after. No original writes.
+- Published Release host on owned loopback HTTPS was stopped/restarted between placement and
+  replay/tracking, which recovered the same persisted reference. Expanded HTTP inputs for totals,
+  roles, internal table/order IDs, timestamps, rejection reason and digests all returned 400.
+  Earlier CSRF/JSON/429/header/privacy/original-route checks passed again. HTTP runs created one
+  owned-copy order/line and removed it afterward; both owned host instances were stopped.
+- T041 is complete as an independent backend diagnostic; T040 and full story acceptance remain
+  pending. T052/T056 have backend status/rowversion/concurrency evidence, not UI acceptance.
+  T060 has successful Debug/Release builds, final Release publish, asset/config inspection and
+  published-host pilot evidence, but its deferred responsive dependency remains unchecked.
+- Preserved new uncommitted implementation for T034–T039/T045–T046 and tracking refinements
+  T049–T051: session helper/bootstrap, CheckoutPanel, OrderDetails, PickupMenu/PublicLayout,
+  TrackOrder, TableMenu integration and reconnect selector. Solution builds with 0 warnings/errors;
+  no interactive/clipboard/reconnect/responsive acceptance is claimed. JS VM checks passed
+  secure random bytes, storage write/read verification, invalid/blocked storage, pending/active
+  separation, immutable uncertain attempt, trusted-origin fragment links and stale-access denial.
+  HTTP served the helper before Blazor and prerendered no private credential/order data.
+- Final Debug build and Release publish passed after the scoped tracking-navigation guard fix.
+  Publish includes local Bootstrap/order helper, no credential/DB/certificate files, and no
+  ConnectionStrings or Bootstrap secrets in published appsettings. Full integration, signed-in
+  regression, actual browser/mobile and real-phone gates remain pending. No extra package,
+  framework, payment/POS/report/delivery/status-write/contact-lookup route was introduced.
+- Reviewed pending-browser-validation.md and implementation-handoff.md. Only this validated
+  evidence, T041 marker and handoff/checklist documentation are committed in this batch; all
+  unfinished source and original navigation evidence remain unstaged. Initial preservation
+  patch remains ignored under artifacts/. No recurring/background execution was created.

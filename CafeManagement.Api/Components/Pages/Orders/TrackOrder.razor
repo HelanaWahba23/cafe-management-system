@@ -1,0 +1,83 @@
+@page "/orders/track"
+@attribute [AllowAnonymous]
+@rendermode InteractiveServer
+@layout PublicLayout
+@implements IDisposable
+@using CafeManagement.Api.Application
+@using CafeManagement.Api.Contracts
+@using CafeManagement.Api.Components.Shared
+@using Microsoft.JSInterop
+@using Microsoft.Extensions.Options
+@inject OrderService Orders
+@inject IJSRuntime JS
+@inject IOptions<PublicMenuOptions> PublicOptions
+@inject NavigationManager Navigation
+
+<PageTitle>Private order | Cafe Management</PageTitle>
+<h1 tabindex="-1" @ref="heading">Private order</h1>
+@if (busy) { <p role="status">Loading order…</p> }
+@if (message is not null) { <p class="alert alert-info" role="status">@message</p> }
+@if (order is not null)
+{
+    <OrderDetails Order="order" />
+    <p>Anyone with your private link can view this order. Keep a copy to retain access.</p>
+    <button type="button" class="btn btn-outline-primary me-2" disabled="@busy" @onclick="CopyAsync">Copy private link</button>
+}
+<button type="button" class="btn btn-primary" disabled="@(!ready || busy)" @onclick="ReloadAsync">Reload order status</button>
+
+@code {
+    private string? capability, message;
+    private const string Unavailable = "This private order could not be found. Check your private link.";
+    private OrderTracking? order;
+    private bool ready, busy = true, disposed;
+    private bool focusPending;
+    private ElementReference heading;
+    private int loadVersion;
+    protected override void OnInitialized() => Navigation.LocationChanged += LocationChanged;
+    private void LocationChanged(object? sender, LocationChangedEventArgs args)
+    {
+        if (new Uri(args.Location).AbsolutePath.TrimEnd('/') != "/orders/track") { ++loadVersion; return; }
+        if (ready && !disposed) _ = InvokeAsync(async () => { if (disposed) return; await ReloadAsync(); if (!disposed) StateHasChanged(); });
+    }
+    public void Dispose() { disposed = true; ++loadVersion; Navigation.LocationChanged -= LocationChanged; }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            if (focusPending) { focusPending = false; await heading.FocusAsync(); }
+            return;
+        }
+        try { ready = true; await ReloadAsync(); }
+        catch (JSException) { order = null; message = Unavailable; busy = false; }
+        StateHasChanged();
+    }
+    private async Task ReloadAsync()
+    {
+        if (!ready) return;
+        var version = ++loadVersion;
+        busy = true; order = null; capability = null; message = null;
+        StateHasChanged();
+        try
+        {
+            // Re-read fragments on every explicit reload so a replaced link cannot use old access.
+            var key = await JS.InvokeAsync<string?>("cafeOrders.trackingContext");
+            var result = await Orders.TrackAsync(key);
+            if (version != loadVersion) return;
+            capability = key;
+            order = result.Value; message = result.Error?.Message;
+        }
+        catch (JSException) { if (version == loadVersion) { capability = null; message = Unavailable; } }
+        finally { if (version == loadVersion) { busy = false; focusPending = true; } }
+    }
+    private async Task CopyAsync()
+    {
+        if (busy || capability is null || order is null) return;
+        try
+        {
+            var current = await JS.InvokeAsync<string?>("cafeOrders.trackingContext");
+            if (current != capability) { await ReloadAsync(); message = "Private link changed. Check the displayed order before copying."; return; }
+            await JS.InvokeVoidAsync("cafeOrders.copyLink", capability, PublicOptions.Value.PublicWebBaseUrl); message = "Private link copied.";
+        }
+        catch (JSException) { message = "Copy is unavailable. Reopen your original private link to keep a copy."; }
+    }
+}

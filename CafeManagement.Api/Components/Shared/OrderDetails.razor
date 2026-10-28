@@ -1,0 +1,20 @@
+@using CafeManagement.Api.Contracts
+
+<section aria-labelledby="saved-order-heading">
+    <h2 id="saved-order-heading" class="h4">Order @Order.Reference</h2>
+    <p>@Order.OrderType @if (Order.TableLabel is not null) { <span>— Table: <strong>@Order.TableLabel</strong></span> }</p>
+    <p>Status: <strong>@Order.Status</strong></p>
+    @if (Order.RejectionReason is not null) { <p role="status">Reason: @Order.RejectionReason</p> }
+    <ul class="list-group mb-3">
+        @foreach (var item in Order.Items)
+        {
+            <li class="list-group-item">@item.ProductName — @item.Quantity × EGP @item.UnitPrice = <strong>EGP @item.LineTotal</strong></li>
+        }
+    </ul>
+    <p class="fw-semibold">Total: EGP @Order.Total</p>
+    <p>Submitted: @Order.CreatedAtUtc.ToString("u") (UTC)</p>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public OrderTracking Order { get; set; } = null!;
+}

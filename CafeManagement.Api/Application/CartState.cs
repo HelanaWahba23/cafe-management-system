@@ -47,6 +47,7 @@ public sealed class CartState
     }
 
     public void Remove(int productId) => items.RemoveAll(item => item.ProductId == productId);
+    public void Clear() => items.Clear();
 
     private bool TryReplace(CartItem candidate, out string? error)
     {

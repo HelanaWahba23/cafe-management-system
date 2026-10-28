@@ -33,7 +33,7 @@
     window.addEventListener("online", updateStatus);
     reload.addEventListener("click", () => window.location.reload());
     document.addEventListener("submit", event => {
-        if (event.target.matches("form[data-admin-write]") && (reloadRequired || !navigator.onLine)) {
+        if (event.target.matches("form[data-admin-write], form[data-order-write]") && (reloadRequired || !navigator.onLine)) {
             event.preventDefault();
             event.stopImmediatePropagation();
             pauseEditing();

@@ -1,3 +1,38 @@
+# Current checkpoint — 2026-10-29
+
+**57/63 validated in the working tree; Feature 002 is not fully accepted.**
+Pending: T021–T023, T046, T059 and T063. The supported in-app browser worked without
+accessing unrelated Edge tabs. See [end-to-end-validation.md](end-to-end-validation.md)
+for the exact completed checks, failures/retries, preservation result and requirement mapping.
+
+The validated independent cart/checkout/session/tracking/reconnect code is committed separately.
+Guard-dependent `TableMenu.razor`, `PickupMenu.razor` and `PublicLayout.razor` remain local,
+including the prepared enhanced-navigation bypass fix. The initial non-secret development
+URL setting in appsettings.Development.json also remains preserved and unstaged. Do not stage
+these blindly or claim the native navigation acceptance passed.
+
+The user's manual-check host remains on **https://localhost:7268**, loopback-only, with the
+verified menu URL `/menu/t/691d9592-3b19-4466-ad62-314b0334af17`. It returned 200 with the correct
+table/cart. Do not interrupt it during the requested test. Its owned launcher session is
+49122; after the user finishes, its `stop` input stops only that host and performs the original
+copy-preservation cleanup. Recheck concurrent changes before applying any fixture restoration.
+Auxiliary ports 7269/7270/7271 and agent-created validation tabs were closed.
+
+The four browser orders and the repeat SQL fixtures were removed; final original/copy
+13-table fingerprints match, with Orders/OrderLines 0/0. No original records/schema/accounts
+or issued QR identifiers changed. The copy's identity counters may have advanced. Debug,
+Release and publish checks passed; the published build's interactive shell initialized with
+zero client errors. All secrets remained in local configuration/in-memory diagnostic clients.
+
+Next: collect the user's native Reload → Stay/Leave result, finish the navigation guard
+acceptance and commit only the now-validated integration files. Real-phone T059 still needs
+an approved phone-reachable trusted HTTPS origin; only loopback is available. Keep T063 pending
+until all required checks pass. No background automation was created.
+
+The earlier checkpoint below is retained as history, not current task status.
+
+---
+
 # Customer Ordering implementation handoff — 2026-10-29
 
 ## Validated and pushed

@@ -4,6 +4,7 @@
 <section class="card mb-3" aria-labelledby="cart-heading">
     <div class="card-body">
         <h2 id="cart-heading" class="h4">Your cart</h2>
+        <p class="text-body-secondary">Your cart is temporary. Leaving this menu or reloading the page clears your selections.</p>
         @if (Cart.Items.Count == 0)
         {
             <p role="status" class="mb-0">Your cart is empty. Add a product from the menu.</p>
@@ -44,9 +45,26 @@
 @code {
     [Parameter, EditorRequired] public CartState Cart { get; set; } = null!;
     [Parameter] public EventCallback OnChanged { get; set; }
+    [Parameter] public EventCallback<bool> OnValidationChanged { get; set; }
     [Parameter] public EventCallback OnCheckoutRequested { get; set; }
     private readonly Dictionary<int, string> errors = [];
     private readonly Dictionary<int, string> input = [];
+    private bool lastInvalid;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        foreach (var id in errors.Keys.Concat(input.Keys).Distinct().Where(id => !Cart.Items.Any(item => item.ProductId == id)).ToArray())
+        { errors.Remove(id); input.Remove(id); }
+        await NotifyValidationAsync();
+    }
+
+    private async Task NotifyValidationAsync()
+    {
+        var invalid = errors.Count > 0;
+        if (invalid == lastInvalid) return;
+        lastInvalid = invalid;
+        await OnValidationChanged.InvokeAsync(invalid);
+    }
 
     private static string Money(decimal value) => value.ToString("F2", CultureInfo.InvariantCulture);
     private string QuantityText(CartItem item) => input.GetValueOrDefault(item.ProductId, item.Quantity.ToString(CultureInfo.InvariantCulture));
@@ -64,6 +82,7 @@
             errors.Remove(productId);
             input.Remove(productId);
         }
+        await NotifyValidationAsync();
         await OnChanged.InvokeAsync();
     }
 
@@ -72,6 +91,7 @@
         Cart.Remove(productId);
         errors.Remove(productId);
         input.Remove(productId);
+        await NotifyValidationAsync();
         await OnChanged.InvokeAsync();
     }
 

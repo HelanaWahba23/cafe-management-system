@@ -1,0 +1,223 @@
+@using CafeManagement.Api.Application
+@using CafeManagement.Api.Contracts
+@using Microsoft.Extensions.Options
+@using Microsoft.JSInterop
+@inject OrderService Orders
+@inject IJSRuntime JS
+@inject IOptions<PublicMenuOptions> PublicOptions
+
+<section class="card mt-3" aria-labelledby="checkout-heading">
+    <div class="card-body">
+        <h2 id="checkout-heading" class="h4">Checkout</h2>
+        @if (HasCartErrors) { <p role="status">Correct the cart quantities before reviewing or placing an order.</p> }
+        <div tabindex="-1" @ref="feedbackTarget">
+            @if (message is not null) { <p class="alert alert-info" role="status">@message</p> }
+        </div>
+        @if (!ready) { @if (message is null) { <p role="status">Preparing private order access…</p> } }
+        else if (saved is not null)
+        {
+            <OrderDetails Order="saved" />
+            @if (privateLink is not null) { <p><a href="@privateLink">Open private order tracking</a></p> }
+            <p>Anyone with your private link can view this order. Keep a copy to retain access.</p>
+            <button type="button" class="btn btn-primary me-2" disabled="@busy" @onclick="RecoverAsync">Reload order status</button>
+            <button type="button" class="btn btn-outline-primary me-2" disabled="@busy" @onclick="CopySavedAsync">Copy private link</button>
+            <button type="button" class="btn btn-outline-primary" disabled="@busy" @onclick="StartNewAsync">Start a new order</button>
+        }
+        else if (uncertain)
+        {
+            <p>The previous submission may have completed. Check its outcome before doing anything else.
+                A missing result can still be in progress. Do not start another order.</p>
+            <button type="button" class="btn btn-primary" disabled="@busy" @onclick="RecoverAsync">Check order outcome</button>
+            @if (outcomeCheckedNotFound && !HasCartErrors && reviewedDraft is not null && review is not null)
+            {
+                <button type="button" class="btn btn-outline-primary ms-2" disabled="@busy" @onclick="RetryAsync">Retry the unchanged order</button>
+            }
+        }
+        else
+        {
+            <p>@Cart.Type @if (TableLabel is not null) { <span>— Table: <strong>@TableLabel</strong></span> }</p>
+            <form data-order-write @onsubmit="ReviewAsync" @onsubmit:preventDefault>
+                <fieldset disabled="@(busy || HasCartErrors || Cart.Items.Count == 0)">
+                    <div class="mb-3">
+                        <label for="checkout-name" class="form-label">Your name</label>
+                        <input id="checkout-name" class="form-control" required maxlength="120" autocomplete="name" @bind="Name" @bind:event="oninput" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="checkout-phone" class="form-label">Phone number</label>
+                        <input id="checkout-phone" class="form-control" type="tel" required maxlength="40" autocomplete="tel" @bind="Phone" @bind:event="oninput" />
+                    </div>
+                    <button type="submit" class="btn btn-primary">@(busy ? "Please wait…" : "Review order")</button>
+                </fieldset>
+            </form>
+            @if (review is not null)
+            {
+                <div class="mt-3" aria-live="polite">
+                    <h3 class="h5" tabindex="-1" @ref="reviewTarget">Review your order</h3>
+                    <p>@review.OrderType @if (review.Table is not null) { <span>— Table: @review.Table.Label</span> }</p>
+                    @if (pricesChanged) { <p class="alert alert-warning">Prices changed. Confirm the updated prices before placing your order.</p> }
+                    <ul class="list-group mb-3">
+                        @foreach (var item in review.Items)
+                        {
+                            <li class="list-group-item">
+                                @item.ProductName — @item.Quantity × EGP @item.UnitPrice = EGP @item.LineTotal
+                                @if (previousPrices.TryGetValue(item.ProductId, out var previous) && previous != item.UnitPrice)
+                                { <span> (Previous unit price: EGP @previous; previous line total: EGP @PreviousLine(item))</span> }
+                            </li>
+                        }
+                    </ul>
+                    <p class="fw-semibold">Total: EGP @review.Total</p>
+                    @if (pricesChanged && previousTotal is not null) { <p>Previous total: EGP @previousTotal</p> }
+                    <button type="button" class="btn btn-success" disabled="@busy" @onclick="PlaceAsync">@(pricesChanged ? "Confirm updated prices and place order" : "Place order")</button>
+                    <button type="button" class="btn btn-outline-secondary ms-2" disabled="@busy" @onclick="Invalidate">Back to editing</button>
+                </div>
+            }
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public CartState Cart { get; set; } = null!;
+    [Parameter] public string? TableLabel { get; set; }
+    [Parameter] public bool HasCartErrors { get; set; }
+    [Parameter] public EventCallback<bool> BusyChanged { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+    private bool ready, busy, uncertain, pricesChanged, outcomeCheckedNotFound;
+    private bool focusReview, focusFeedback;
+    private ElementReference reviewTarget, feedbackTarget;
+    private string name = "", phone = "", signature = "";
+    private string? privateLink, previousTotal, message;
+    private Attempt? attempt;
+    private OrderDraft? reviewedDraft;
+    private OrderReview? review;
+    private OrderTracking? saved;
+    private Dictionary<int, string> previousPrices = [];
+    private string Name { get => name; set { name = value; Invalidate(); } }
+    private string Phone { get => phone; set { phone = value; Invalidate(); } }
+    private string Signature() => $"{Cart.Type}/{Cart.TablePublicCode}/" + string.Join(";", Cart.Items.Select(i => $"{i.ProductId}:{i.Quantity}:{i.UnitPrice}"));
+    protected override void OnParametersSet()
+    {
+        var current = Signature();
+        if (signature != current || HasCartErrors) { signature = current; Invalidate(); }
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            try
+            {
+                if (focusReview && review is not null) { focusReview = false; await reviewTarget.FocusAsync(); }
+                else if (focusFeedback) { focusFeedback = false; await feedbackTarget.FocusAsync(); }
+            }
+            catch (JSException) { /* Reconnect feedback remains authoritative if focus is interrupted. */ }
+            return;
+        }
+        try { attempt = await JS.InvokeAsync<Attempt?>("cafeOrders.readPending"); uncertain = attempt?.Started == true; ready = true; }
+        catch (JSException) { message = "Private order storage is unavailable. Checkout is blocked; retain any existing private link."; }
+        StateHasChanged();
+    }
+    private void Invalidate() { review = null; reviewedDraft = null; pricesChanged = false; }
+    private OrderDraft Draft() => new()
+    {
+        OrderType = Cart.Type.ToString(), TablePublicCode = Cart.TablePublicCode, CustomerName = name, CustomerPhone = phone,
+        Items = Cart.Items.Select(item => new OrderDraftItem { ProductId = item.ProductId, Quantity = item.Quantity }).ToArray()
+    };
+    private async Task SetBusy(bool value) { busy = value; await BusyChanged.InvokeAsync(value); }
+    private async Task ReviewAsync()
+    {
+        if (!ready || busy || uncertain || HasCartErrors || Cart.Items.Count == 0) return;
+        await SetBusy(true); message = null;
+        try
+        {
+            attempt = await JS.InvokeAsync<Attempt>("cafeOrders.ensureAttempt");
+            if (attempt.Started) { uncertain = true; return; }
+            var draft = Draft(); var stamp = Signature();
+            previousPrices = Cart.Items.ToDictionary(i => i.ProductId, i => Money(i.UnitPrice)); previousTotal = Money(Cart.Total);
+            var result = await Orders.ReviewAsync(attempt.Capability, draft);
+            if (stamp != Signature() || draft.CustomerName != name.Trim() || draft.CustomerPhone != phone.Trim())
+            { Invalidate(); message = "Order details changed. Review again."; return; }
+            if (result.Error is not null) { Invalidate(); message = Feedback(result.Error); focusFeedback = true; return; }
+            reviewedDraft = draft; review = result.Value; pricesChanged = HasChanges(review!); focusReview = true;
+        }
+        catch (JSException) { message = "Private order storage could not be verified. No order was submitted."; }
+        finally { await SetBusy(false); }
+    }
+    private async Task PlaceAsync()
+    {
+        if (busy || uncertain || HasCartErrors || review is null || reviewedDraft is null || attempt is null) return;
+        await SetBusy(true); message = null; outcomeCheckedNotFound = false;
+        try
+        {
+            await JS.InvokeVoidAsync("cafeOrders.markStarted", attempt.Capability);
+            attempt.Started = true;
+            var result = await Orders.PlaceAsync(attempt.Capability, new OrderPlacementInput
+            {
+                Draft = reviewedDraft,
+                ReviewedPrices = review.Items.Select(i => new ReviewedPrice { ProductId = i.ProductId, UnitPrice = i.UnitPrice }).ToArray()
+            });
+            if (result.Value is not null) { await ShowSavedAsync(result.Value.Order); return; }
+            if (result.Error?.Kind == OperationErrorKind.Unexpected) { uncertain = true; message = "The order outcome is uncertain. Check it using this same private context."; return; }
+            if (result.Error?.Code == "submission_conflict") { uncertain = true; message = Feedback(result.Error); return; }
+            await JS.InvokeVoidAsync("cafeOrders.markNotAccepted", attempt.Capability); attempt.Started = false;
+            message = Feedback(result.Error!);
+            if (result.Review is not null)
+            {
+                previousPrices = review.Items.ToDictionary(i => i.ProductId, i => i.UnitPrice); previousTotal = review.Total;
+                review = result.Review; pricesChanged = true; focusReview = true;
+            }
+            else { Invalidate(); focusFeedback = true; }
+        }
+        catch (JSException) { uncertain = attempt.Started; message = "Private order storage could not be verified. Check the outcome before any retry."; }
+        finally { await SetBusy(false); }
+    }
+    private async Task RecoverAsync()
+    {
+        if (busy || attempt is null) return;
+        await SetBusy(true);
+        try
+        {
+            var result = await Orders.TrackAsync(attempt.Capability);
+            if (result.Value is not null) await ShowSavedAsync(result.Value);
+            else
+            {
+                outcomeCheckedNotFound = result.Error?.Kind == OperationErrorKind.NotFound;
+                message = "No saved outcome is available yet. A submission may still be in progress; check again using this same context.";
+            }
+        }
+        finally { await SetBusy(false); }
+    }
+    private async Task RetryAsync()
+    {
+        if (busy || HasCartErrors || !outcomeCheckedNotFound || reviewedDraft is null || review is null) return;
+        uncertain = false;
+        await PlaceAsync();
+    }
+    private async Task ShowSavedAsync(OrderTracking order)
+    {
+        saved = order; uncertain = false; message = "Your saved order is shown below.";
+        try
+        {
+            privateLink = await JS.InvokeAsync<string>("cafeOrders.privateLink", attempt!.Capability, PublicOptions.Value.PublicWebBaseUrl);
+            await JS.InvokeVoidAsync("cafeOrders.markSaved", attempt.Capability, order.Reference.ToString("D"));
+        }
+        catch (JSException) { message = "Your order is saved. Keep its private link; private storage could not be updated."; }
+        await OnSaved.InvokeAsync();
+    }
+    private async Task StartNewAsync()
+    {
+        if (busy || saved is null) return;
+        try { attempt = await JS.InvokeAsync<Attempt>("cafeOrders.newAttempt"); saved = null; privateLink = null; Name = ""; Phone = ""; message = "Add products to start a new order."; }
+        catch (JSException) { message = "The new order context could not be retained. Keep the existing private link."; }
+    }
+    private async Task CopySavedAsync()
+    {
+        if (busy || saved is null || attempt is null) return;
+        try { await JS.InvokeVoidAsync("cafeOrders.copyLink", attempt.Capability, PublicOptions.Value.PublicWebBaseUrl); message = "Private link copied."; }
+        catch (JSException) { message = "Copy is unavailable. Keep the private tracking link shown above."; }
+    }
+    private bool HasChanges(OrderReview value) => value.Items.Any(i => !previousPrices.TryGetValue(i.ProductId, out var price) || price != i.UnitPrice);
+    private static string Money(decimal amount) => amount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+    private string PreviousLine(OrderReviewItem item) => Money(decimal.Parse(previousPrices[item.ProductId], System.Globalization.CultureInfo.InvariantCulture) * item.Quantity);
+    private static string Feedback(OperationError error) => error.FieldErrors is null ? error.Message
+        : string.Join(" ", error.FieldErrors.Values.SelectMany(messages => messages).Distinct());
+    public sealed class Attempt { public string Capability { get; set; } = ""; public bool Started { get; set; } public string? Reference { get; set; } }
+}

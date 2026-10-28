@@ -81,8 +81,8 @@ The capability-only recovery read and a minimal functional `/orders/track` page 
 here, so a customer can open the private link immediately after checkout. US4 extends that
 existing page with tracking refinements and complete status/security validation.
 
-- [ ] T024 [US2] Create `CafeManagement.Api/Application/OrderService.cs` capability/draft validation using the existing context factory: validate exactly 32 random bytes / 43-character base64url, SHA-256 binary(32) digest, and deterministic versioned length-delimited intent hashing of trimmed name/phone, Type, stable table code and sorted product IDs/quantities; exclude reviewed prices/server fields and never log credentials or return hashes (after T023; FR-005/007/009/010/013).
-- [ ] T025 [US2] Implement read-only review in `CafeManagement.Api/Application/OrderService.cs`: validate guest fields/nonempty unique selections, resolve DineIn table via existing PublicCode or require Pickup no table, load available products, calculate authoritative checked decimal line/total amounts within decimal(18,2), and return Review or safe field/not-found/unavailable errors; no reservation or order write (after T024; FR-003/004/005/006/013).
+- [X] T024 [US2] Create `CafeManagement.Api/Application/OrderService.cs` capability/draft validation using the existing context factory: validate exactly 32 random bytes / 43-character base64url, SHA-256 binary(32) digest, and deterministic versioned length-delimited intent hashing of trimmed name/phone, Type, stable table code and sorted product IDs/quantities; exclude reviewed prices/server fields and never log credentials or return hashes (after T023; FR-005/007/009/010/013).
+- [X] T025 [US2] Implement read-only review in `CafeManagement.Api/Application/OrderService.cs`: validate guest fields/nonempty unique selections, resolve DineIn table via existing PublicCode or require Pickup no table, load available products, calculate authoritative checked decimal line/total amounts within decimal(18,2), and return Review or safe field/not-found/unavailable errors; no reservation or order write (after T024; FR-003/004/005/006/013).
 - [ ] T026 [US2] Implement atomic new placement in `CafeManagement.Api/Application/OrderService.cs`: short RepeatableRead, stable-ID product/table reads, revalidate availability and complete reviewed-price vector, calculate from DB prices only, persist name/price/table-label snapshots plus name/phone, server reference/time, Submitted order and all lines, then commit; enforce nonempty lines/summed total and exact representability; no locks while waiting for user confirmation (after T025; FR-003/004/005/006/007/008/013).
 - [ ] T027 [US2] Add accepted-outcome lookup before current catalog validation and unique-digest race recovery in `CafeManagement.Api/Application/OrderService.cs`: same capability/intent returns saved result, changed intent conflicts; rollback/dispose failed insert and fresh-context lookup only for the relevant duplicate index; ambiguous commit/deadlock/cancellation yields safe recovery guidance, never automatic write retry/new credential (after T026; FR-005/007/009).
 - [ ] T028 [US2] Add price_changed/product_unavailable/submission_conflict results to `CafeManagement.Api/Application/OrderService.cs` and `CafeManagement.Api/Contracts/OrderContracts.cs`; any price increase/decrease returns refreshed Review with zero inserts, later confirmation rechecks again, unknown/extra price entries fail validation; retain existing `CafeManagement.Api/Contracts/ApiErrors.cs` behavior and add only the safe endpoint-specific review extension needed by the contract (after T027; FR-005/006/007/011).
@@ -553,3 +553,37 @@ authorized validated scope and never pre-existing unrelated edits or secrets.
   POS, payment, delivery, firewall/certificate or unrelated change.
 - T017–T020 complete. T021–T063 remain unchecked and unimplemented. Feature 001 remains at
   54 completed tasks with only T051/T056 pending; no complete-feature acceptance is claimed.
+
+### Independent backend continuation (T024–T025, 2026-10-29)
+
+- User explicitly authorized independent backend development while browser-only T021–T023
+  remain pending, overriding that validation-only execution gate without claiming US1 accepted.
+  T024 then T025 were implemented in dependency order. No browser/UI integration was advanced.
+- Preserved the six initial uncommitted files. An ignored binary patch at
+  artifacts/resume-20261029-preserved.patch has SHA-256
+  A00DCDC46CDAFC82627A0E9720C4FA3B4A981006E3ABB41BEF18735A5C2C7743.
+  Initial application edits and earlier navigation evidence are intentionally excluded from
+  this commit. Added pending-browser-validation.md for deferred checks; no privacy bypass.
+- Requirements checklist still passes 16/16; no AGENTS.md or implementation extension hooks.
+- T024: strict canonical 43-character base64url decoding to 32 bytes; SHA-256 on decoded bytes;
+  validated/snapshotted drafts; versioned length-prefixed UTF-8 intent with sorted IDs/quantities,
+  type, stable public table code and trimmed name/phone. Hashes stay private and are not logged.
+- Focused disposable diagnostic passed malformed/padded/noncanonical capabilities, hash lengths
+  and independently computed capability digest, sorted-item equivalence, credential-independent
+  intent, each changed immutable field, delimiter collision resistance, null/blank/overlong
+  contacts, invalid types/table modes, missing/null/duplicate items and invalid quantities.
+- T025: fresh untracked context per read; authoritative product prices, whole quantities,
+  checked decimal arithmetic, decimal(18,2) bounds and two-place EGP output. No reservation/write.
+  Read-only owned-copy SQL checks passed Pickup/no-table, correct DineIn table code/label,
+  missing table/product, unavailable product and required capability. Orders 0 -> 0 and
+  OrderLines 0 -> 0; no fixtures, original catalog, accounts or QR records were mutated.
+  Boundary diagnostic also passed invalid money/maximum amount, safe DB failure and cancellation.
+- Local restore needed approved access to the existing NuGet configuration. Default build was
+  blocked by a running app locking its executable; solution build with an ignored isolated
+  OutputPath passed with 0 warnings/0 errors. No running user process was terminated.
+  The ignored console diagnostic initially loaded the portable SQL stub, then lacked sandbox
+  SQL encryption support; using the existing Windows driver and approved local SQL execution
+  passed. No encryption/certificate restriction, dependency or application setting was changed.
+  One nullable warning was confined to the disposable diagnostic, not the solution build.
+- Only OrderService.cs, the two task markers/new evidence and pending-browser-validation.md
+  belong to this validated batch. No endpoint/DI registration, placement, payment or POS added.

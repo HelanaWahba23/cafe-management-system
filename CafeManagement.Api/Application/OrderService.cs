@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Data;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -6,11 +7,135 @@ using CafeManagement.Api.Contracts;
 using CafeManagement.Api.Domain;
 using CafeManagement.Api.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 
 namespace CafeManagement.Api.Application;
 
 public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
 {
+    public async Task<OrderPlacementOutcome> PlaceAsync(string? capability, OrderPlacementInput? input,
+        CancellationToken cancellationToken = default)
+    {
+        var error = Prepare(capability, input?.Draft, out var draft);
+        if (error is not null) return new(null, error);
+        // Snapshot the comparison vector before the first await, just like the immutable intent.
+        var prices = input!.ReviewedPrices?.Select(p => p is null ? null : new ReviewedPrice
+            { ProductId = p.ProductId, UnitPrice = p.UnitPrice }).ToArray();
+        var validation = new OrderPlacementInput
+        {
+            Draft = new OrderDraft
+            {
+                OrderType = draft!.Type.ToString(), TablePublicCode = draft.TablePublicCode,
+                CustomerName = draft.CustomerName, CustomerPhone = draft.CustomerPhone,
+                Items = draft.Items.Select(i => new OrderDraftItem { ProductId = i.ProductId, Quantity = i.Quantity }).ToArray()
+            },
+            ReviewedPrices = prices
+        };
+        var issues = validation.Validate(new ValidationContext(validation)).ToArray();
+        if (issues.Length > 0)
+            return new(null, new OperationError(OperationErrorKind.Invalid, "Review the selected product prices.",
+                FieldErrors: issues.SelectMany(issue => issue.MemberNames.Select(field =>
+                    (Field: field, Message: issue.ErrorMessage!))).GroupBy(issue => issue.Field)
+                    .ToDictionary(group => group.Key, group => group.Select(issue => issue.Message).Distinct().ToArray())));
+
+        try
+        {
+            await using var db = await factory.CreateDbContextAsync(cancellationToken);
+            await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken);
+            var existing = await FindAsync(db, draft!.CapabilityHash, cancellationToken);
+            if (existing is not null) return Replay(existing, draft.IntentHash);
+
+            // Table/product reads retain their locks only through this short local acceptance.
+            var review = await ReviewCoreAsync(db, draft, cancellationToken);
+            if (review.Error is not null) return new(null, review.Error);
+            var comparison = prices!.ToDictionary(p => p!.ProductId, p => { p!.TryReadUnitPrice(out var value); return value; });
+            if (review.Value!.Items.Any(item => comparison[item.ProductId] != ReadMoney(item.UnitPrice)))
+                return new(null, new OperationError(OperationErrorKind.Conflict,
+                    "Prices have changed. Review the updated amounts and confirm again.", "price_changed"), Review: review.Value);
+
+            int? tableId = draft.Type == OrderType.DineIn
+                ? await db.CafeTables.Where(t => t.PublicCode == draft.TablePublicCode).Select(t => (int?)t.Id)
+                    .SingleAsync(cancellationToken) : null;
+            var order = new Order
+            {
+                CapabilityHash = draft.CapabilityHash, IntentHash = draft.IntentHash, Type = draft.Type,
+                TableId = tableId, TableLabel = review.Value.Table?.Label,
+                CustomerName = draft.CustomerName, CustomerPhone = draft.CustomerPhone,
+                Total = ReadMoney(review.Value.Total)
+            };
+            foreach (var item in review.Value.Items)
+                order.Lines.Add(new OrderLine
+                {
+                    ProductId = item.ProductId, ProductName = item.ProductName, Quantity = item.Quantity,
+                    UnitPrice = ReadMoney(item.UnitPrice), LineTotal = ReadMoney(item.LineTotal)
+                });
+            if (order.Lines.Count == 0 || order.Lines.Sum(line => line.LineTotal) != order.Total)
+                return new(null, InvalidAmount());
+            db.Orders.Add(order);
+            await db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return new(new OrderPlacementResult(Project(order)), null, Created: true);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is SqlException sql
+            && sql.Errors.Cast<SqlError>().Any(e => e.Number is 2601 or 2627
+                && e.Message.Contains("IX_Orders_CapabilityHash", StringComparison.Ordinal)))
+        {
+            // The failed transaction/context have been disposed. Only this precise unique index
+            // permits winner recovery; unrelated unique failures must never claim success.
+            try
+            {
+                await using var recovery = await factory.CreateDbContextAsync(cancellationToken);
+                var winner = await FindAsync(recovery, draft!.CapabilityHash, cancellationToken);
+                return winner is null ? Uncertain() : Replay(winner, draft.IntentHash);
+            }
+            catch (Exception) { return Uncertain(); }
+        }
+        catch (OverflowException) { return new(null, InvalidAmount()); }
+        catch (Exception)
+        {
+            // Cancellation/timeout/commit loss may be ambiguous. Never retry writes or replace
+            // the credential here; an explicit capability-only read is the recovery operation.
+            return Uncertain();
+        }
+    }
+
+    public async Task<(OrderTracking? Value, OperationError? Error)> TrackAsync(string? capability,
+        CancellationToken cancellationToken = default)
+    {
+        if (!TryHashCapability(capability, out var hash)) return (null, MissingTracking());
+        try
+        {
+            await using var db = await factory.CreateDbContextAsync(cancellationToken);
+            var order = await FindAsync(db, hash!, cancellationToken);
+            return order is null ? (null, MissingTracking()) : (Project(order), null);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (Exception)
+        {
+            return (null, new OperationError(OperationErrorKind.Unexpected,
+                "Unable to check the order outcome. Please try again."));
+        }
+    }
+
+    private static Task<Order?> FindAsync(CafeDbContext db, byte[] hash, CancellationToken cancellationToken) =>
+        db.Orders.AsNoTracking().Include(order => order.Lines).SingleOrDefaultAsync(order => order.CapabilityHash == hash, cancellationToken);
+
+    private static OrderPlacementOutcome Replay(Order existing, byte[] intent) =>
+        CryptographicOperations.FixedTimeEquals(existing.IntentHash, intent)
+            ? new(new OrderPlacementResult(Project(existing)), null)
+            : new(null, new OperationError(OperationErrorKind.Conflict,
+                "This private order context has already been used for different order details.", "submission_conflict"));
+
+    private static OrderPlacementOutcome Uncertain() => new(null, new OperationError(OperationErrorKind.Unexpected,
+        "The order outcome is uncertain. Keep this private context and check the order outcome before retrying.", "outcome_uncertain"));
+    private static OperationError MissingTracking() => new(OperationErrorKind.NotFound,
+        "This private order could not be found. Check your private link.", "order_not_found");
+    private static decimal ReadMoney(string value) => decimal.Parse(value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture);
+    private static OrderTracking Project(Order order) => new(order.Reference, order.Type.ToString(), order.TableLabel,
+        order.Lines.OrderBy(line => line.ProductId).Select(line => new OrderTrackingItem(line.ProductName, line.Quantity,
+            Money(line.UnitPrice), Money(line.LineTotal))).ToArray(), Money(order.Total), order.Status.ToString(),
+        order.RejectionReason, order.CreatedAtUtc);
+
     public async Task<(OrderReview? Value, OperationError? Error)> ReviewAsync(string? capability,
         OrderDraft? input, CancellationToken cancellationToken = default)
     {
@@ -20,38 +145,7 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
         try
         {
             await using var db = await factory.CreateDbContextAsync(cancellationToken);
-            OrderReviewTable? table = null;
-            if (draft!.Type == OrderType.DineIn)
-            {
-                table = await db.CafeTables.AsNoTracking().Where(t => t.PublicCode == draft.TablePublicCode)
-                    .Select(t => new OrderReviewTable(t.PublicCode, t.Label)).SingleOrDefaultAsync(cancellationToken);
-                if (table is null)
-                    return (null, new OperationError(OperationErrorKind.NotFound,
-                        "This table could not be found. Check the table QR code.", "table_not_found"));
-            }
-
-            var ids = draft!.Items.Select(item => item.ProductId).ToArray();
-            var products = await db.Products.AsNoTracking().Where(p => ids.Contains(p.Id)).OrderBy(p => p.Id)
-                .Select(p => new { p.Id, p.Name, p.Price, p.IsAvailable }).ToArrayAsync(cancellationToken);
-            if (products.Length != ids.Length)
-                return (null, new OperationError(OperationErrorKind.NotFound,
-                    "A selected product could not be found. Reload the menu.", "product_not_found"));
-            if (products.Any(p => !p.IsAvailable))
-                return (null, new OperationError(OperationErrorKind.Conflict,
-                    "A selected product is no longer available. Update the cart.", "product_unavailable"));
-
-            var items = new List<OrderReviewItem>();
-            decimal total = 0;
-            foreach (var product in products)
-            {
-                var quantity = draft.Items.Single(item => item.ProductId == product.Id).Quantity;
-                var lineTotal = checked(product.Price * quantity);
-                total = checked(total + lineTotal);
-                if (!ValidMoney(product.Price) || !ValidMoney(lineTotal) || !ValidMoney(total))
-                    return (null, InvalidAmount());
-                items.Add(new OrderReviewItem(product.Id, product.Name, quantity, Money(product.Price), Money(lineTotal)));
-            }
-            return (new OrderReview(draft.Type.ToString(), table, items.ToArray(), Money(total)), null);
+            return await ReviewCoreAsync(db, draft!, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (OverflowException) { return (null, InvalidAmount()); }
@@ -61,6 +155,44 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
             return (null, new OperationError(OperationErrorKind.Unexpected,
                 "Unable to review the order. Please try again."));
         }
+    }
+
+    private static async Task<(OrderReview? Value, OperationError? Error)> ReviewCoreAsync(
+        CafeDbContext db, PreparedDraft draft, CancellationToken cancellationToken)
+    {
+        OrderReviewTable? table = null;
+        if (draft!.Type == OrderType.DineIn)
+        {
+            table = await db.CafeTables.AsNoTracking().Where(t => t.PublicCode == draft.TablePublicCode)
+                .Select(t => new OrderReviewTable(t.PublicCode, t.Label)).SingleOrDefaultAsync(cancellationToken);
+            if (table is null)
+                return (null, new OperationError(OperationErrorKind.NotFound,
+                    "This table could not be found. Check the table QR code.", "table_not_found"));
+        }
+
+        var ids = draft!.Items.Select(item => item.ProductId).ToArray();
+        var products = await db.Products.AsNoTracking().Where(p => ids.Contains(p.Id)).OrderBy(p => p.Id)
+            .Select(p => new { p.Id, p.Name, p.Price, p.IsAvailable }).ToArrayAsync(cancellationToken);
+        if (products.Length != ids.Length)
+            return (null, new OperationError(OperationErrorKind.NotFound,
+                "A selected product could not be found. Reload the menu.", "product_not_found"));
+        if (products.Any(p => !p.IsAvailable))
+            return (null, new OperationError(OperationErrorKind.Conflict,
+                $"Selected products are no longer available (product IDs: {string.Join(", ", products.Where(p => !p.IsAvailable).Select(p => p.Id))}). Update the cart.",
+                "product_unavailable", "Items"));
+
+        var items = new List<OrderReviewItem>();
+        decimal total = 0;
+        foreach (var product in products)
+        {
+            var quantity = draft.Items.Single(item => item.ProductId == product.Id).Quantity;
+            var lineTotal = checked(product.Price * quantity);
+            total = checked(total + lineTotal);
+            if (!ValidMoney(product.Price) || !ValidMoney(lineTotal) || !ValidMoney(total))
+                return (null, InvalidAmount());
+            items.Add(new OrderReviewItem(product.Id, product.Name, quantity, Money(product.Price), Money(lineTotal)));
+        }
+        return (new OrderReview(draft.Type.ToString(), table, items.ToArray(), Money(total)), null);
     }
 
     private static OperationError? Prepare(string? capability, OrderDraft? input, out PreparedDraft? prepared)

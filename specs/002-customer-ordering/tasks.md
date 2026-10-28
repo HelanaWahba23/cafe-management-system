@@ -83,10 +83,10 @@ existing page with tracking refinements and complete status/security validation.
 
 - [X] T024 [US2] Create `CafeManagement.Api/Application/OrderService.cs` capability/draft validation using the existing context factory: validate exactly 32 random bytes / 43-character base64url, SHA-256 binary(32) digest, and deterministic versioned length-delimited intent hashing of trimmed name/phone, Type, stable table code and sorted product IDs/quantities; exclude reviewed prices/server fields and never log credentials or return hashes (after T023; FR-005/007/009/010/013).
 - [X] T025 [US2] Implement read-only review in `CafeManagement.Api/Application/OrderService.cs`: validate guest fields/nonempty unique selections, resolve DineIn table via existing PublicCode or require Pickup no table, load available products, calculate authoritative checked decimal line/total amounts within decimal(18,2), and return Review or safe field/not-found/unavailable errors; no reservation or order write (after T024; FR-003/004/005/006/013).
-- [ ] T026 [US2] Implement atomic new placement in `CafeManagement.Api/Application/OrderService.cs`: short RepeatableRead, stable-ID product/table reads, revalidate availability and complete reviewed-price vector, calculate from DB prices only, persist name/price/table-label snapshots plus name/phone, server reference/time, Submitted order and all lines, then commit; enforce nonempty lines/summed total and exact representability; no locks while waiting for user confirmation (after T025; FR-003/004/005/006/007/008/013).
-- [ ] T027 [US2] Add accepted-outcome lookup before current catalog validation and unique-digest race recovery in `CafeManagement.Api/Application/OrderService.cs`: same capability/intent returns saved result, changed intent conflicts; rollback/dispose failed insert and fresh-context lookup only for the relevant duplicate index; ambiguous commit/deadlock/cancellation yields safe recovery guidance, never automatic write retry/new credential (after T026; FR-005/007/009).
-- [ ] T028 [US2] Add price_changed/product_unavailable/submission_conflict results to `CafeManagement.Api/Application/OrderService.cs` and `CafeManagement.Api/Contracts/OrderContracts.cs`; any price increase/decrease returns refreshed Review with zero inserts, later confirmation rechecks again, unknown/extra price entries fail validation; retain existing `CafeManagement.Api/Contracts/ApiErrors.cs` behavior and add only the safe endpoint-specific review extension needed by the contract (after T027; FR-005/006/007/011).
-- [ ] T029 [US2] Add minimal capability-only tracking/outcome read in `CafeManagement.Api/Application/OrderService.cs`, projecting saved reference/type/table snapshot/line snapshots/EGP amounts/status/reason/time with no name/phone/internal IDs/hashes/rowversion/Identity data; missing/invalid/unknown capability is the same safe failure; never use public reference/contact/table code as credentials (after T028; FR-007/009/010/013).
+- [X] T026 [US2] Implement atomic new placement in `CafeManagement.Api/Application/OrderService.cs`: short RepeatableRead, stable-ID product/table reads, revalidate availability and complete reviewed-price vector, calculate from DB prices only, persist name/price/table-label snapshots plus name/phone, server reference/time, Submitted order and all lines, then commit; enforce nonempty lines/summed total and exact representability; no locks while waiting for user confirmation (after T025; FR-003/004/005/006/007/008/013).
+- [X] T027 [US2] Add accepted-outcome lookup before current catalog validation and unique-digest race recovery in `CafeManagement.Api/Application/OrderService.cs`: same capability/intent returns saved result, changed intent conflicts; rollback/dispose failed insert and fresh-context lookup only for the relevant duplicate index; ambiguous commit/deadlock/cancellation yields safe recovery guidance, never automatic write retry/new credential (after T026; FR-005/007/009).
+- [X] T028 [US2] Add price_changed/product_unavailable/submission_conflict results to `CafeManagement.Api/Application/OrderService.cs` and `CafeManagement.Api/Contracts/OrderContracts.cs`; any price increase/decrease returns refreshed Review with zero inserts, later confirmation rechecks again, unknown/extra price entries fail validation; retain existing `CafeManagement.Api/Contracts/ApiErrors.cs` behavior and add only the safe endpoint-specific review extension needed by the contract (after T027; FR-005/006/007/011).
+- [X] T029 [US2] Add minimal capability-only tracking/outcome read in `CafeManagement.Api/Application/OrderService.cs`, projecting saved reference/type/table snapshot/line snapshots/EGP amounts/status/reason/time with no name/phone/internal IDs/hashes/rowversion/Identity data; missing/invalid/unknown capability is the same safe failure; never use public reference/contact/table code as credentials (after T028; FR-007/009/010/013).
 - [ ] T030 [US2] Add anonymous JSON POST `/api/orders/review` in `CafeManagement.Api/Controllers/PublicOrdersController.cs`, extracting opaque guest bearer explicitly and requiring existing antiforgery header/cookie, common validation and safe 200/400/404/409 ProblemDetails behavior; no JWT/Identity-scheme replacement, staff-cookie ownership, write or private-order lookup through review (after T029; FR-005/006/010/013).
 - [ ] T031 [US2] Add JSON POST `/api/orders` to `CafeManagement.Api/Controllers/PublicOrdersController.cs` using the same protections: 201 new, 200 saved replay, safe 400/404/409 review/conflict results, token-free `/orders/track` relative path and no bearer Location header; reject prohibited/unknown fields and preserve global error handling (after T030; FR-003/005/006/007/010/013).
 - [ ] T032 [US2] Add anonymous GET `/api/orders/tracking` to `CafeManagement.Api/Controllers/PublicOrdersController.cs` requiring capability-only lookup, generic 404 for missing/invalid/unknown context and minimal DTO; use it for read-only uncertain-outcome recovery, no public lookup/list/status mutation endpoint (after T031; FR-007/009/010/013).
@@ -587,3 +587,35 @@ authorized validated scope and never pre-existing unrelated edits or secrets.
   One nullable warning was confined to the disposable diagnostic, not the solution build.
 - Only OrderService.cs, the two task markers/new evidence and pending-browser-validation.md
   belong to this validated batch. No endpoint/DI registration, placement, payment or POS added.
+
+### Atomic placement and private tracking (T026–T029, 2026-10-29)
+
+- Continued independent backend work in dependency order under the user's browser deferral.
+  Reused the validated review core inside a short RepeatableRead acceptance transaction;
+  table/products are authoritative, totals exact, and all lines/snapshots commit together.
+- T026: owned-copy diagnostics saved one Pickup and one DineIn order with correct Submitted
+  status, contact fields, table association/snapshot and exact current product prices/totals.
+- T027: same capability/intent returned the saved reference without another insert; changed
+  customer intent conflicted. Historical replay succeeded even after owned-copy name/price/
+  availability edits. Parallel same-capability calls yielded exactly one created order; an
+  explicit subsequent call recovered that same winner. Code inspection confirms recovery
+  only for SQL 2601/2627 naming IX_Orders_CapabilityHash, after failed context/transaction
+  disposal; no automatic write retry. Injected save failure returned uncertain-outcome
+  guidance and left zero partial order/lines. Broader locking/commit-loss exercises remain T041.
+- T028: both upward/downward reviewed-price mismatches returned price_changed/current Review
+  without insertion; safe ProblemDetails includes review only for that error. Extra product
+  prices rejected. Unavailable products identify public product IDs and reject the whole order;
+  decimal(18,2) line overflow rejected before save. Existing ApiErrors behavior is unchanged.
+- T029: capability-only read returned minimal saved snapshots; missing/malformed/unknown keys
+  returned identical order_not_found errors. Serialized tracking omitted contact fields,
+  internal IDs, digests and rowversion. Lost response can be recovered through this read;
+  no public reference/contact/table lookup or staff/status endpoint was added.
+- Owned copy baseline was Orders=0/OrderLines=0; three diagnostic orders/three lines were
+  created in total (two sequential and one concurrent winner). Finally restored only the
+  edited copy fixture values and removed only the recorded diagnostic references/lines.
+  Counts returned to 0/0 and combined full-row fingerprints of all primary-key tables matched
+  exactly before/after, including Identity, QR/catalog and migration history. No original DB
+  writes, migration, account provisioning or reset occurred; copy identity counters may advance.
+- Final solution build in the ignored isolated output passed with 0 warnings/0 errors.
+  Manual diagnostic artifacts are ignored, not a committed test project/framework. Existing
+  six unfinished files/evidence remain unstaged; T021–T023 and T030 onward remain pending.

@@ -138,3 +138,7 @@ public sealed record OrderPlacementResult(OrderTracking Order)
 {
     public string TrackingPath => "/orders/track";
 }
+
+// Service outcome; endpoints serialize only Value or a safe ProblemDetails projection.
+public sealed record OrderPlacementOutcome(OrderPlacementResult? Value, Application.OperationError? Error,
+    bool Created = false, OrderReview? Review = null);

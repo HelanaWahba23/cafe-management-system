@@ -6,6 +6,16 @@ namespace CafeManagement.Api.Contracts;
 
 public static class ApiErrors
 {
+    public static ObjectResult ToOrderResult(OrderPlacementOutcome outcome)
+    {
+        var problem = CreateProblem(outcome.Error ?? throw new ArgumentException("An order error is required."));
+        if (outcome.Error.Code == "price_changed" && outcome.Review is not null)
+            problem.Extensions["review"] = outcome.Review;
+        var result = new ObjectResult(problem) { StatusCode = problem.Status };
+        result.ContentTypes.Add("application/problem+json");
+        return result;
+    }
+
     public static ProblemDetails CreateProblem(OperationError error)
     {
         var status = error.Kind switch

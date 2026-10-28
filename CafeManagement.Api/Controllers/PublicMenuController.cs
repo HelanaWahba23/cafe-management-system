@@ -10,6 +10,15 @@ namespace CafeManagement.Api.Controllers;
 [Route("api/menu/tables")]
 public sealed class PublicMenuController(PublicMenuService menu) : ControllerBase
 {
+    [HttpGet("/api/menu/pickup")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    [ProducesResponseType(typeof(PickupMenuResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> Pickup(CancellationToken cancellationToken)
+    {
+        var result = await menu.GetPickupAsync(cancellationToken);
+        return result.Error is null ? Ok(PickupMenuResponse.From(result.Value!)) : ApiErrors.ToResult(result.Error);
+    }
+
     [HttpGet("{publicCode}")]
     [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
     [ProducesResponseType(typeof(PublicMenuResponse), StatusCodes.Status200OK)]

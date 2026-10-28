@@ -3,7 +3,7 @@
 **Input**: Approved [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [API contract](contracts/api.md), [UI contract](contracts/ui.md),
 [quickstart.md](quickstart.md), requirements.md and Constitution v1.0.1.
-**Created**: 2026-10-27. **Status**: T001–T020 validated; T021–T063 not started.
+**Created**: 2026-10-27. **Status**: T001–T020, T024–T033 and T043–T044 validated; browser/integration gates pending.
 **Organization**: Setup → shared foundation → US1/US2/US3/US4 → cross-cutting validation.
 **Validation policy**: Restore/build and manual checks; no generated automated tests by default.
 Only an explicitly requested test or a concrete bug requiring diagnosis can justify an exception.
@@ -108,8 +108,8 @@ existing page with tracking refinements and complete status/security validation.
 guest details, exactly one order per submission with null table fields and a private link.
 US2 supplies shared acceptance/recovery; no dine-in interaction is needed to use pickup.
 
-- [ ] T043 [US3] Add a separate pickup catalog read to `CafeManagement.Api/Application/PublicMenuService.cs` and additive response shape in `CafeManagement.Api/Contracts/PublicMenuContracts.cs`, reusing available category/product projection with EGP/two-place prices and no table/contact fields while leaving the existing table response/validation unchanged (after T042; FR-001/004/012).
-- [ ] T044 [US3] Add anonymous no-store GET `/api/menu/pickup` in `CafeManagement.Api/Controllers/PublicMenuController.cs`, including empty/load-error behavior and no table requirement; verify invalid table endpoints still fail rather than becoming pickup (after T043; FR-001/004/011/012).
+- [X] T043 [US3] Add a separate pickup catalog read to `CafeManagement.Api/Application/PublicMenuService.cs` and additive response shape in `CafeManagement.Api/Contracts/PublicMenuContracts.cs`, reusing available category/product projection with EGP/two-place prices and no table/contact fields while leaving the existing table response/validation unchanged (after T042; FR-001/004/012).
+- [X] T044 [US3] Add anonymous no-store GET `/api/menu/pickup` in `CafeManagement.Api/Controllers/PublicMenuController.cs`, including empty/load-error behavior and no table requirement; verify invalid table endpoints still fail rather than becoming pickup (after T043; FR-001/004/011/012).
 - [ ] T045 [US3] Create `CafeManagement.Api/Components/Pages/Menu/PickupMenu.razor` at `/menu/pickup` using PublicLayout, Interactive Server, shared MenuCatalog/CartPanel/CheckoutPanel and circuit CartState, explicit Pickup label and null table context; reuse guest validation, price reconfirmation and capability recovery without a second order service (after T044; FR-001/002/004/005/006/007/011/013).
 - [ ] T046 [US3] Add direct pickup discovery in `CafeManagement.Api/Components/Layout/PublicLayout.razor` and integrate context-leaving warnings with `CafeManagement.Api/Components/Pages/Menu/TableMenu.razor` / `PickupMenu.razor`; verify leave clears unsubmitted cart, stay retains it, no hidden table/type transfer or forced QR step, and existing Admin/login navigation remains intact (after T045; FR-003/004/011/012).
 - [ ] T047 [US3] Manually place two pickup orders without QR/table, reject any supplied table code, validate missing/blank/overlong name/phone, unavailable products and both price directions/rechanges, then inspect shared Orders/OrderLines/status/guest recovery and open/reload each private link in a fresh signed-out browser through the existing US2 tracking page with no table association; record outcomes in `specs/002-customer-ordering/tasks.md` using `quickstart.md`, without staff/payment features (after T046/T038; FR-004/005/006/007/008/009/013, SC-002/003/004/005/008).
@@ -641,3 +641,26 @@ authorized validated scope and never pre-existing unrelated edits or secrets.
   or new package added. Only new PublicOrdersController, OrderService registration and this
   evidence/task markers are staged. The pre-existing CartState registration and five other
   unfinished file changes remain unstaged. Browser-only gates and T034 onward stay pending.
+
+### Independent pickup catalog (T043–T044, 2026-10-29)
+
+- User's explicit direction to continue independent work permits the additive read-only pickup
+  catalog while T042's browser acceptance remains pending. This backend read has no runtime
+  dependency on checkout/private-link acceptance; no US2/US3 completion is claimed.
+- T043/T044: added no-table PickupMenuDetails/Response, reused the existing available-only
+  category query, and exposed anonymous no-store GET /api/menu/pickup. The existing table
+  response and table-validation route retain their prior behavior.
+- Owned-copy HTTPS checks passed EGP/no-table shape, available product IDs matching SQL,
+  byte-equivalent category projection versus the existing valid-table response, and malformed
+  table 400 without pickup fallback. Temporarily unavailable copy fixtures yielded empty
+  product arrays with categories retained; availability was restored in finally. A throwing
+  context-factory diagnostic returned the safe load error without exception details.
+- Repeated affected order HTTP checks still passed, with one temporary order/line removed by
+  its recorded reference and owned host stopped; no original DB/schema/account changes.
+  Final solution build passed 0 warnings/0 errors. No new dependencies or test suite.
+- Only the three backend catalog/controller/DTO files and this evidence/task markers are staged.
+  T034–T039 and T045–T046 have new uncommitted implementation that builds, but interactive,
+  navigation, reconnect and responsive acceptance remain unverified and unchecked. JS runtime
+  diagnostics passed storage failure/canonical capability/metadata separation/fragment/link
+  checks; HTTP confirmed helper delivery/order and credential-free prerender shells. These
+  are not substituted for actual interactive browser checks.

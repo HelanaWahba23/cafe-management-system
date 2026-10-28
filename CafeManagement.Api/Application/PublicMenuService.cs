@@ -20,12 +20,7 @@ public sealed class PublicMenuService(IDbContextFactory<CafeDbContext> factory)
             if (table is null)
                 return (null, new OperationError(OperationErrorKind.NotFound, "This table could not be found. Check the table QR code."));
 
-            // Filter in SQL and project public fields only, including explicit empty product arrays.
-            var categories = await db.MenuCategories.AsNoTracking().OrderBy(c => c.Id)
-                .Select(c => new PublicMenuCategory(c.Id, c.Name,
-                    c.Products.Where(p => p.IsAvailable).OrderBy(p => p.Id)
-                        .Select(p => new PublicMenuProduct(p.Id, p.Name, p.Price)).ToArray()))
-                .ToArrayAsync(cancellationToken);
+            var categories = await CategoriesAsync(db, cancellationToken);
             return (new PublicMenuDetails(table, "EGP", categories), null);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
@@ -34,4 +29,27 @@ public sealed class PublicMenuService(IDbContextFactory<CafeDbContext> factory)
             return (null, new OperationError(OperationErrorKind.Unexpected, "Unable to load the menu. Please try again."));
         }
     }
+
+    public async Task<(PickupMenuDetails? Value, OperationError? Error)> GetPickupAsync(
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await using var db = await factory.CreateDbContextAsync(cancellationToken);
+            return (new PickupMenuDetails("EGP", await CategoriesAsync(db, cancellationToken)), null);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (Exception)
+        {
+            return (null, new OperationError(OperationErrorKind.Unexpected, "Unable to load the menu. Please try again."));
+        }
+    }
+
+    // Shared available-only projection, retaining explicit empty categories and stable ordering.
+    private static Task<PublicMenuCategory[]> CategoriesAsync(CafeDbContext db, CancellationToken cancellationToken) =>
+        db.MenuCategories.AsNoTracking().OrderBy(c => c.Id)
+            .Select(c => new PublicMenuCategory(c.Id, c.Name,
+                c.Products.Where(p => p.IsAvailable).OrderBy(p => p.Id)
+                    .Select(p => new PublicMenuProduct(p.Id, p.Name, p.Price)).ToArray()))
+            .ToArrayAsync(cancellationToken);
 }

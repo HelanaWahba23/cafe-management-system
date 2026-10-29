@@ -1,10 +1,10 @@
 # Remaining manual browser validation — 2026-10-29
 
-Current counts: **57/63**. Detailed completed browser/backend evidence is in
+Current counts: **58/63**. Detailed completed browser/backend evidence is in
 [end-to-end-validation.md](end-to-end-validation.md). Do not repeat completed checks merely
 because they appeared in the earlier handoff.
 
-## Native navigation: T021–T023 and T046
+## Native navigation: T021, T023 and T046
 
 The verified manual host stays running at:
 https://localhost:7268/menu/t/691d9592-3b19-4466-ad62-314b0334af17
@@ -30,5 +30,5 @@ certificates, network access or claim desktop responsive emulation satisfies thi
 ## Final acceptance: T063
 
 Leave pending until the above results and all integration commits are complete. Feature 001's
-separate T051/T056 gaps remain unchanged. T022 registration/tab-isolation and T023 regression
+separate T051/T056 gaps remain unchanged. T022 registration/tab-isolation is independently accepted; T023 regression
 have supporting evidence but retain the T021 prerequisite gate.

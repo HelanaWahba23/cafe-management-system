@@ -1,3 +1,9 @@
+# Independent review — 2026-10-29
+
+**58/63 validated.** T022 accepted from existing registration/tab-isolation evidence under explicit authorization to continue independent tasks. Pending: T021, T023, T046, T059, T063. Preserve the four uncommitted source/configuration files described below. User now authorizes Features 003–005; these do not imply acceptance of native navigation or physical-phone checks. Confirmed POS: dine-in with existing table or takeaway without table, optional walk-in name/phone; online guest contacts remain required.
+
+---
+
 # Current checkpoint — 2026-10-29
 
 **57/63 validated in the working tree; Feature 002 is not fully accepted.**

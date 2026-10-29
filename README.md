@@ -12,7 +12,7 @@ A single ASP.NET Core 8 application with Blazor Server interfaces, Bootstrap, EF
 | Payments & Billing | 10/16 | Validated cash ledger/UI pushed as `0b9038c`. Paymob sandbox implementation is prepared locally and unverified. |
 | Admin Dashboard & Reports | 12/12 | Reports, responsive theme, builds, authorization and preservation validated; pushed as `8657b2e`. |
 
-This is an implementation checkpoint, not a claim that all five features are accepted. The report/theme milestone is `8657b2e`; the customer UI continuation is recorded in its handoff. Read the implementation handoffs before resuming work or changing a running host.
+This is an implementation checkpoint, not a claim that all five features are accepted. The latest code milestone is `18d6a67`, pushed to origin/master. See [the current handoff](IMPLEMENTATION-HANDOFF.md) before resuming; it supersedes historical checkpoints in feature documents. Read the implementation handoffs before resuming work or changing a running host.
 
 ## Run locally
 

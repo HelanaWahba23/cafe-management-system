@@ -15,3 +15,7 @@ Next:build/publish exact staged cash-only snapshot, push validated milestone, th
 Exact cash-only index snapshot built/published and passed12 HTTP checks on7272; unverified Paymob routes were confirmed absent. Owned snapshot host7272 PID19740 uses artifacts/cash-index-publish; stop only after matching its recorded command line. Final payment fixture cleanup already passed. Cash milestone ready for push; provider files/three mixed-file online additions remain uncommitted. Do not replace working files with staged versions.
 
 Cash milestone0b9038c pushed to origin/master.10/16 tasks accepted in working tree after T016; T009/T010/T011/T012/T013/T014 remain pending because provider and full customer payment acceptance are incomplete. Prepared Paymob files and online hunks in PaymentPanel/PaymentsController/Program remain local. Continue Feature005 as explicitly authorized; no need to repeat cash validation unless changed.
+
+## Superseding final checkpoint
+
+Customer navigation is accepted and pushed as18d6a67; Feature00261/63. Feature00512/12 is pushed. Original database now has the reviewed additive migrations with verified backup and prior-record preservation. The provider source/online hunks listed above remain uncommitted and unverified; real test credentials plus approved public HTTPS callback are the blocker for T009–T014. See ../../IMPLEMENTATION-HANDOFF.md for current hosts, exact remaining acceptance and safe resume. Do not replay historical cleanup/migration commands or repeat the resolved native-dialog request.

@@ -69,6 +69,7 @@ builder.Services.AddScoped<PublicMenuService>();
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<PosOrderService>();
 builder.Services.AddScoped<PaymentService>();
+builder.Services.AddScoped<AdminReportService>();
 builder.Services.Configure<PaymobOptions>(builder.Configuration.GetSection("Paymob"));
 builder.Services.AddScoped<CartState>();
 builder.Services.AddOptions<PublicMenuOptions>()
@@ -145,9 +146,11 @@ app.Use(async (context, next) =>
     var privateDocument = path.StartsWithSegments("/menu/t")
         || string.Equals(documentPath, "/menu/pickup", StringComparison.OrdinalIgnoreCase)
         || string.Equals(documentPath, "/orders/track", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(documentPath, "/admin/dashboard", StringComparison.OrdinalIgnoreCase)
         || string.Equals(documentPath, "/payments/return", StringComparison.OrdinalIgnoreCase);
     if (privateDocument || path.StartsWithSegments("/api/orders")
-        || path.StartsWithSegments("/pos") || path.StartsWithSegments("/api/pos") || path.StartsWithSegments("/api/payments"))
+        || path.StartsWithSegments("/pos") || path.StartsWithSegments("/api/pos") || path.StartsWithSegments("/api/payments")
+        || path.StartsWithSegments("/api/admin/reports"))
     {
         // OnStarting also preserves these headers when downstream error handling clears a response.
         context.Response.OnStarting(() =>

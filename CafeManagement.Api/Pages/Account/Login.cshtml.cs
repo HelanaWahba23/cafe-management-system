@@ -40,7 +40,7 @@ public sealed class LoginModel(SignInManager<IdentityUser> signIn, UserManager<I
                 var user = await users.FindByNameAsync(Input.Email);
                 if (user is not null && await users.IsInRoleAsync(user, "Admin"))
                 {
-                    return LocalRedirect(Url.IsLocalUrl(ReturnUrl) ? ReturnUrl! : "/admin/categories");
+                    return LocalRedirect(Url.IsLocalUrl(ReturnUrl) ? ReturnUrl! : "/admin/dashboard");
                 }
 
                 if (user is not null && await users.IsInRoleAsync(user, "Cashier"))

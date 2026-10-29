@@ -8,16 +8,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Staff sign in | Cafe Management</title>
     <link rel="stylesheet" href="/lib/bootstrap/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="/css/site.css" />
+    <link rel="stylesheet" href="/css/site.css" asp-append-version="true" />
 </head>
 <body>
 <main class="container py-4" id="main-content">
 <div class="row justify-content-center">
-<section class="col-12 col-md-8 col-lg-5" aria-labelledby="account-heading">
+<section class="col-12 col-md-8 col-lg-5 card card-body auth-panel" aria-labelledby="account-heading">
     @if (Model.AccessDenied)
     {
         <h1 id="account-heading">Access denied</h1>
-        <p>Your account does not have access to menu and table management.</p>
+        <p>Your account does not have access to this staff workspace.</p>
         <form method="post" action="/account/logout" data-enhance="false" asp-antiforgery="false">
             @Html.AntiForgeryToken()
             <button type="submit" class="btn btn-outline-secondary">Sign out</button>
@@ -25,6 +25,7 @@
     }
     else
     {
+        <p class="eyebrow mb-2">Behind the counter</p>
         <h1 id="account-heading">Staff sign in</h1>
         <p id="sign-in-help">Use your staff email and password.</p>
         <form method="post" data-enhance="false" asp-antiforgery="false" aria-describedby="sign-in-help">

@@ -5,14 +5,14 @@
 
 ## Clarifications
 
-### Session2026-10-29
+### Session 2026-10-29
 
 - Provider/mode: Paymob Egypt, test/sandbox only, EGP, Hosted Unified Checkout; never live or simulated successful payments. Secrets stay in local User Secrets. Missing credentials leave real provider validation pending while independent cash/reporting work continues.
 - Safety: pending/unknown online attempts block rejection and counter cash recording until reconciliation; paid orders cannot be rejected. Refunds are excluded.
 
 ## User Scenarios & Testing *(mandatory)*
 
-### User Story1 - Record counter cash (Priority:P1)
+### User Story 1 - Record counter cash (Priority: P1)
 
 A current cashier records receipt of the full saved order amount once and sees the receipt/bill.
 
@@ -24,7 +24,7 @@ A current cashier records receipt of the full saved order amount once and sees t
 2. **Given** an already paid order, **When** repeated or concurrent recording occurs, **Then** no second payment is created or total changed.
 3. **Given** unauthorized access, rejected order or pending/uncertain online attempt, **When** recording is requested, **Then** it fails without settlement.
 
-### User Story2 - Pay online in sandbox (Priority:P2)
+### User Story 2 - Pay online in sandbox (Priority: P2)
 
 A customer uses their private order context to open Paymob-hosted sandbox checkout and refresh verified status afterwards.
 
@@ -38,7 +38,7 @@ A customer uses their private order context to open Paymob-hosted sandbox checko
 4. **Given** duplicate/reordered notifications or interrupted initiation, **When** processing/reconciliation is repeated, **Then** no duplicate settlement or blind new external attempt occurs; unknown outcomes remain blocked until verified.
 5. **Given** counter orders or another private context, **When** anonymous payment access is requested, **Then** no unrelated order/payment information is disclosed.
 
-### User Story3 - View bill and payment status (Priority:P3)
+### User Story 3 - View bill and payment status (Priority: P3)
 
 Customers privately and cashiers securely view itemized saved bills with payment state distinct from fulfillment.
 

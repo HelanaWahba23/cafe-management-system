@@ -1,0 +1,53 @@
+@page "/admin/dashboard"
+@attribute [Authorize(Policy = "Admin")]
+@rendermode InteractiveServer
+@layout AdminLayout
+@using CafeManagement.Api.Application
+@using CafeManagement.Api.Contracts
+@inject AdminReportService Reports
+@inject AuthenticationStateProvider Authentication
+
+<PageTitle>Dashboard | Cafe Management</PageTitle>
+<div class="dashboard-intro mb-4"><p class="eyebrow mb-2">Cafe management</p><h1>Every day, a clearer picture.</h1><p class="text-secondary mb-0">Orders and recorded cash, together in one overview.</p></div>
+<form @onsubmit="Apply" @onsubmit:preventDefault="true" class="card card-body mb-4">
+    <fieldset disabled="@(busy || !ready)"><legend class="h5">Reporting period</legend><div class="row g-3 align-items-end">
+        <div class="col-sm-5 col-lg-4"><label for="report-from" class="form-label">From date (UTC)</label><input id="report-from" type="date" class="form-control" @bind="from" /></div>
+        <div class="col-sm-5 col-lg-4"><label for="report-to" class="form-label">Through date (UTC)</label><input id="report-to" type="date" class="form-control" @bind="to" /></div>
+        <div class="col-sm-2 col-lg-4"><button type="submit" class="btn btn-primary w-100">@(busy ? "Loading…" : "Apply & refresh")</button></div>
+    </div><p class="small text-secondary mt-3 mb-0">Inclusive dates · Up to 366 days · Default: last seven UTC days.</p></fieldset>
+</form>
+@if (failure is not null) { <div class="alert alert-warning" role="alert">@failure</div> }
+@if (busy) { <p role="status">Loading your overview…</p> }
+else if (report is not null)
+{
+    <p class="small text-secondary" role="status">@report.From.ToString("dd MMM yyyy") – @report.To.ToString("dd MMM yyyy") · UTC</p>
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3"><section class="card card-body metric-card h-100"><h2 class="h6 text-secondary">Orders created</h2><p class="metric-value">@report.TotalOrders.ToString("N0")</p><p class="small text-secondary mb-0">All fulfillment statuses</p></section></div>
+        <div class="col-sm-6 col-xl-3"><section class="card card-body metric-card h-100"><h2 class="h6 text-secondary">Recorded cash revenue</h2><p class="metric-value">@report.CashRevenue <span class="fs-6">EGP</span></p><p class="small text-secondary mb-0">By receipt date</p></section></div>
+        <div class="col-sm-6 col-xl-3"><section class="card card-body metric-card h-100"><h2 class="h6 text-secondary">Cash receipts</h2><p class="metric-value">@report.CashReceiptCount.ToString("N0")</p><p class="small text-secondary mb-0">Full orders paid at the counter</p></section></div>
+        <div class="col-sm-6 col-xl-3"><section class="card card-body metric-card h-100"><h2 class="h6 text-secondary">Sandbox test receipts</h2><p class="metric-value">@report.SandboxReceiptCount.ToString("N0")</p><p class="small text-secondary mb-0">@report.SandboxValue EGP · Excluded from revenue</p></section></div>
+    </div>
+    @if (report.TotalOrders == 0 && report.CashReceiptCount == 0) { <div class="alert alert-light border">No orders or cash receipts in this period. Choose another date range to explore.</div> }
+    <div class="row g-4">
+        <div class="col-lg-4"><section class="card card-body h-100"><h2 class="h4">Order status</h2><p class="small text-secondary">Current status of orders created in the period.</p><dl class="mb-0">@foreach (var group in report.Statuses) { <div class="d-flex justify-content-between gap-3 py-2 border-bottom"><dt class="fw-normal">@group.Label</dt><dd class="fw-semibold mb-0">@group.Count.ToString("N0")</dd></div> }</dl></section></div>
+        <div class="col-lg-4"><section class="card card-body h-100"><h2 class="h4">How guests order</h2><p class="small text-secondary">Orders created in the period.</p><dl>@foreach (var group in report.Fulfillment) { <div class="d-flex justify-content-between gap-3 py-2 border-bottom"><dt class="fw-normal">@(group.Label == "DineIn" ? "Dine-in" : "Pickup / takeaway")</dt><dd class="fw-semibold mb-0">@group.Count.ToString("N0")</dd></div> }</dl><h3 class="h6 mt-3">Order source</h3><dl class="mb-0">@foreach (var group in report.Origins) { <div class="d-flex justify-content-between gap-3 py-2 border-bottom"><dt class="fw-normal">@(group.Label == "Counter" ? "Cashier walk-in" : "Customer website")</dt><dd class="fw-semibold mb-0">@group.Count.ToString("N0")</dd></div> }</dl></section></div>
+        <div class="col-lg-4"><section class="card card-body h-100"><h2 class="h4">Cash by day</h2><p class="small text-secondary">Cash recorded in the period, independent of order creation.</p>@if (report.DailyCash.Length == 0) { <p>No cash receipts recorded.</p> } else { <div class="table-responsive"><table class="table align-middle"><caption>Recorded cash · EGP · UTC</caption><thead><tr><th scope="col">Day</th><th scope="col">Receipts</th><th scope="col">Total</th></tr></thead><tbody>@foreach (var day in report.DailyCash) { <tr><td>@day.Date.ToString("dd MMM")</td><td>@day.Count</td><td>@day.Total</td></tr> }</tbody></table></div> }</section></div>
+    </div>
+}
+
+@code {
+    private DateOnly to = DateOnly.FromDateTime(DateTime.UtcNow);
+    private DateOnly from = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-6);
+    private AdminReport? report;
+    private string? failure;
+    private bool busy, ready;
+    protected override Task OnInitializedAsync() => Load();
+    protected override void OnAfterRender(bool firstRender) { if (firstRender) { ready = true; StateHasChanged(); } }
+    private Task Apply() => busy ? Task.CompletedTask : Load();
+    private async Task Load()
+    {
+        busy = true; failure = null; report = null;
+        try { var result = await Reports.GetAsync((await Authentication.GetAuthenticationStateAsync()).User, from, to); if (result.Error is not null) failure = result.Error.Message; else report = result.Value; }
+        finally { busy = false; }
+    }
+}

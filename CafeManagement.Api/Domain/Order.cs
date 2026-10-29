@@ -7,11 +7,13 @@ public sealed class Order
     public required byte[] CapabilityHash { get; set; }
     public required byte[] IntentHash { get; set; }
     public required OrderType Type { get; set; }
+    public OrderOrigin Origin { get; set; } = OrderOrigin.Customer;
+    public string? CreatedByUserId { get; set; }
     public int? TableId { get; set; }
     public CafeTable? Table { get; set; }
     public string? TableLabel { get; set; }
-    public required string CustomerName { get; set; }
-    public required string CustomerPhone { get; set; }
+    public string? CustomerName { get; set; }
+    public string? CustomerPhone { get; set; }
     public string Currency { get; private set; } = "EGP";
     public decimal Total { get; set; }
     public OrderStatus Status { get; internal set; } = OrderStatus.Submitted;

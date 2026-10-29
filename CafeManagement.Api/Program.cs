@@ -67,6 +67,7 @@ builder.Services.AddScoped<TableService>();
 builder.Services.AddScoped<TableQrService>();
 builder.Services.AddScoped<PublicMenuService>();
 builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<PosOrderService>();
 builder.Services.AddScoped<CartState>();
 builder.Services.AddOptions<PublicMenuOptions>()
     .Bind(builder.Configuration)
@@ -75,7 +76,10 @@ builder.Services.AddOptions<PublicMenuOptions>()
 builder.Services.AddOptions<BootstrapOptions>()
     .Bind(builder.Configuration.GetSection(BootstrapOptions.SectionName));
 builder.Services.AddAuthorization(options =>
-    options.AddPolicy("Admin", policy => policy.RequireAuthenticatedUser().RequireRole("Admin")));
+{
+    options.AddPolicy("Admin", policy => policy.RequireAuthenticatedUser().RequireRole("Admin"));
+    options.AddPolicy("Cashier", policy => policy.RequireAuthenticatedUser().RequireRole("Cashier"));
+});
 builder.Services.AddAntiforgery(options =>
 {
     options.HeaderName = "RequestVerificationToken";
@@ -139,7 +143,8 @@ app.Use(async (context, next) =>
     var privateDocument = path.StartsWithSegments("/menu/t")
         || string.Equals(documentPath, "/menu/pickup", StringComparison.OrdinalIgnoreCase)
         || string.Equals(documentPath, "/orders/track", StringComparison.OrdinalIgnoreCase);
-    if (privateDocument || path.StartsWithSegments("/api/orders"))
+    if (privateDocument || path.StartsWithSegments("/api/orders")
+        || path.StartsWithSegments("/pos") || path.StartsWithSegments("/api/pos"))
     {
         // OnStarting also preserves these headers when downstream error handling clears a response.
         context.Response.OnStarting(() =>

@@ -20,7 +20,7 @@ public sealed class LoginModel(SignInManager<IdentityUser> signIn, UserManager<I
 
     public IActionResult OnGet()
     {
-        if (User.Identity?.IsAuthenticated == true && !User.IsInRole("Admin"))
+        if (User.Identity?.IsAuthenticated == true && !User.IsInRole("Admin") && !User.IsInRole("Cashier"))
         {
             AccessDenied = true;
             Response.StatusCode = StatusCodes.Status403Forbidden;
@@ -42,6 +42,9 @@ public sealed class LoginModel(SignInManager<IdentityUser> signIn, UserManager<I
                 {
                     return LocalRedirect(Url.IsLocalUrl(ReturnUrl) ? ReturnUrl! : "/admin/categories");
                 }
+
+                if (user is not null && await users.IsInRoleAsync(user, "Cashier"))
+                    return LocalRedirect(Url.IsLocalUrl(ReturnUrl) ? ReturnUrl! : "/pos/orders");
 
                 return RedirectToPage("/Account/Login");
             }

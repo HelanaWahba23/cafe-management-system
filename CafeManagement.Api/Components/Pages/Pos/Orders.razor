@@ -1,0 +1,53 @@
+@page "/pos/orders"
+@attribute [Authorize(Policy = "Cashier")]
+@rendermode InteractiveServer
+@layout PosLayout
+@using CafeManagement.Api.Application
+@using CafeManagement.Api.Contracts
+@using CafeManagement.Api.Domain
+@inject PosOrderService Pos
+@inject AuthenticationStateProvider Authentication
+
+<PageTitle>Orders | Cafe Counter</PageTitle>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4"><div><p class="text-uppercase text-secondary mb-1">Cashier workspace</p><h1 class="mb-0">Incoming orders</h1></div><a class="btn btn-primary" href="/pos/orders/new">New walk-in order</a></div>
+<div class="d-flex flex-wrap align-items-end gap-3 mb-4">
+    <div><label for="status-filter" class="form-label">Order status</label><select id="status-filter" class="form-select" @bind="filter" disabled="@busy"><option value="">All statuses</option>@foreach (var status in Enum.GetNames<OrderStatus>()) { <option value="@status">@status</option> }</select></div>
+    <button class="btn btn-outline-primary" disabled="@busy" @onclick="Refresh">@(busy ? "Loading…" : "Refresh orders")</button>
+</div>
+@if (failure is not null) { <div class="alert alert-danger" role="alert">@failure</div> }
+@if (busy) { <p role="status">Loading orders…</p> }
+else if (result is not null)
+{
+    <p class="text-secondary" role="status">@result.TotalCount order(s) · Page @result.Page</p>
+    @if (result.Items.Length == 0) { <div class="card card-body">No orders match this view.</div> }
+    <div class="row g-3">
+    @foreach (var order in result.Items)
+    {
+        <div class="col-md-6 col-xl-4"><article class="card h-100 shadow-sm"><div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between gap-2"><span class="badge text-bg-secondary">@order.Status</span><span class="text-secondary">@order.Origin</span></div>
+            <h2 class="h5 mt-3">@(order.OrderType == "DineIn" ? $"Table {order.TableLabel}" : order.Origin == "Counter" ? "Takeaway" : "Online pickup")</h2>
+            <p class="small text-break mb-1">@order.Reference</p><p class="small text-secondary">@order.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</p>
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2"><strong>@order.Total EGP</strong><a class="btn btn-outline-primary" href="@($"/pos/orders/{order.Id}")">Open order</a></div>
+        </div></article></div>
+    }
+    </div>
+    <div class="d-flex flex-wrap gap-2 mt-4"><button class="btn btn-outline-secondary" disabled="@(page <= 1)" @onclick="Previous">Previous</button><button class="btn btn-outline-secondary" disabled="@(page * 50 >= result.TotalCount)" @onclick="Next">Next</button></div>
+}
+
+@code {
+    private PosOrderPage? result;
+    private string filter = "", appliedFilter = "";
+    private string? failure;
+    private int page = 1;
+    private bool busy;
+    protected override Task OnInitializedAsync() => Load();
+    private async Task Refresh() { if (busy) return; page = 1; appliedFilter = filter; await Load(); }
+    private async Task Previous() { if (busy || page <= 1) return; page--; await Load(); }
+    private async Task Next() { if (busy || result is null || page * 50 >= result.TotalCount) return; page++; await Load(); }
+    private async Task Load()
+    {
+        busy = true; failure = null;
+        try { var response = await Pos.ListAsync((await Authentication.GetAuthenticationStateAsync()).User, string.IsNullOrEmpty(appliedFilter) ? null : appliedFilter, page); if (response.Error is not null) { result = null; failure = response.Error.Message; } else result = response.Value; }
+        finally { busy = false; }
+    }
+}

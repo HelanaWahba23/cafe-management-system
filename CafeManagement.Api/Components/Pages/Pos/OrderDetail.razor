@@ -1,0 +1,68 @@
+@page "/pos/orders/{Id:long}"
+@attribute [Authorize(Policy = "Cashier")]
+@rendermode InteractiveServer
+@layout PosLayout
+@using CafeManagement.Api.Application
+@using CafeManagement.Api.Contracts
+@inject PosOrderService Orders
+@inject AuthenticationStateProvider Authentication
+
+<PageTitle>Order & bill | Cafe Counter</PageTitle>
+<a href="/pos/orders">Back to orders</a>
+<div class="d-flex flex-wrap justify-content-between gap-3 my-3"><h1>Order &amp; bill</h1><button class="btn btn-outline-primary" disabled="@busy" @onclick="Load">Reload order</button></div>
+@if (failure is not null) { <div class="alert alert-danger" role="alert">@failure</div> }
+@if (notice is not null) { <p class="text-success" role="status">@notice</p> }
+@if (busy) { <p role="status">Working…</p> }
+@if (order is not null)
+{
+    <div class="row g-4">
+        <section class="col-lg-5"><div class="card card-body h-100">
+            <h2 class="h4">@order.Status</h2><p class="text-break">@order.Reference</p>
+            <p>@(order.OrderType == "DineIn" ? $"Dine-in · Table {order.TableLabel}" : order.Origin == "Counter" ? "Takeaway" : "Online pickup") · @order.Origin</p>
+            <p class="text-secondary">@order.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</p>
+            @if (order.CustomerName is not null) { <p class="text-break">Name: @order.CustomerName</p> }
+            @if (order.CustomerPhone is not null) { <p class="text-break">Phone: @order.CustomerPhone</p> }
+            @if (order.RejectionReason is not null) { <p class="text-break">Rejection: @order.RejectionReason</p> }
+            <form @onsubmit="NoSubmit" @onsubmit:preventDefault="true" data-order-write="true">
+            <fieldset disabled="@busy"><legend class="h5">Fulfillment</legend>
+                @if (NextStatus is not null) { <button type="button" class="btn btn-primary mb-3" @onclick="() => Change(NextStatus!)">Mark @NextStatus</button> }
+                @if (order.Status == "Submitted")
+                {
+                    <div><label class="form-label" for="reject-reason">Reason for rejection</label><textarea class="form-control" id="reject-reason" maxlength="500" @bind="reason"></textarea><button type="button" class="btn btn-outline-danger mt-2" @onclick="Reject">Reject order</button></div>
+                }
+                @if (NextStatus is null) { <p>This order has reached its final fulfillment status.</p> }
+            </fieldset></form>
+        </div></section>
+        <section class="col-lg-7"><div class="card card-body"><h2 class="h4">Itemized bill</h2>
+            <p class="text-secondary">Saved order amounts · Payment settlement is recorded separately.</p>
+            <ul class="list-group list-group-flush">@foreach (var item in order.Items) { <li class="list-group-item px-0"><div class="d-flex flex-wrap justify-content-between gap-2"><strong class="text-break">@item.ProductName</strong><strong>@item.LineTotal EGP</strong></div><span class="text-secondary">@item.Quantity × @item.UnitPrice EGP</span></li> }</ul>
+            <div class="d-flex flex-wrap justify-content-between gap-2 border-top pt-3 mt-3 fs-4"><strong>Total</strong><strong>@order.Total @order.Currency</strong></div>
+        </div></section>
+    </div>
+}
+
+@code {
+    [Parameter] public long Id { get; set; }
+    private PosOrderDetail? order;
+    private string? failure, notice;
+    private string reason = "";
+    private bool busy;
+    private int generation;
+    private string? NextStatus => order?.Status switch { "Submitted" => "Preparing", "Preparing" => "Ready", "Ready" => "Completed", _ => null };
+    protected override Task OnParametersSetAsync() => LoadCore();
+    private void NoSubmit() { }
+    private Task Reject() => Change("Rejected");
+    private Task Load() => busy ? Task.CompletedTask : LoadCore();
+    private async Task LoadCore()
+    {
+        var current = ++generation; var requestedId = Id; busy = true; failure = notice = null; order = null; reason = "";
+        try { var result = await Orders.GetAsync((await Authentication.GetAuthenticationStateAsync()).User, requestedId); if (current != generation || Id != requestedId) return; if (result.Error is not null) failure = result.Error.Message; else order = result.Value; }
+        finally { if (current == generation) busy = false; }
+    }
+    private async Task Change(string next)
+    {
+        if (busy || order is null) return; var requestedId = Id; var current = generation; busy = true; failure = notice = null;
+        try { var result = await Orders.ChangeStatusAsync((await Authentication.GetAuthenticationStateAsync()).User, requestedId, new() { Status = next, RowVersion = order.RowVersion, RejectionReason = next == "Rejected" ? reason : null }); if (current != generation || Id != requestedId) return; if (result.Error is not null) { failure = result.Error.Message; if (result.Error.Kind == OperationErrorKind.Conflict) order = null; } else { order = result.Value; notice = "Order status updated."; reason = ""; } }
+        finally { if (current == generation) busy = false; }
+    }
+}

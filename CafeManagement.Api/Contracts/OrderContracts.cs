@@ -18,7 +18,11 @@ public sealed class OrderDraft : IValidatableObject
     public string CustomerPhone { get => customerPhone; set => customerPhone = value?.Trim() ?? string.Empty; }
     public OrderDraftItem?[]? Items { get; set; } = [];
 
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext) => ValidateCore(false);
+
+    internal IEnumerable<ValidationResult> ValidateCounter() => ValidateCore(true);
+
+    private IEnumerable<ValidationResult> ValidateCore(bool optionalContacts)
     {
         if (OrderType is not (nameof(Domain.OrderType.DineIn) or nameof(Domain.OrderType.Pickup)))
             yield return new ValidationResult("Choose DineIn or Pickup.", [nameof(OrderType)]);
@@ -26,9 +30,9 @@ public sealed class OrderDraft : IValidatableObject
             yield return new ValidationResult("Supply a valid table QR code for dine-in.", [nameof(TablePublicCode)]);
         if (OrderType == nameof(Domain.OrderType.Pickup) && TablePublicCode is not null)
             yield return new ValidationResult("Pickup must not include a table code.", [nameof(TablePublicCode)]);
-        if (string.IsNullOrWhiteSpace(CustomerName) || CustomerName.Length > 120)
+        if ((!optionalContacts && string.IsNullOrWhiteSpace(CustomerName)) || CustomerName.Length > 120)
             yield return new ValidationResult("Enter a name of 1–120 characters.", [nameof(CustomerName)]);
-        if (string.IsNullOrWhiteSpace(CustomerPhone) || CustomerPhone.Length > 40)
+        if ((!optionalContacts && string.IsNullOrWhiteSpace(CustomerPhone)) || CustomerPhone.Length > 40)
             yield return new ValidationResult("Enter a phone number of 1–40 characters.", [nameof(CustomerPhone)]);
 
         if (Items is null || Items.Length == 0)
@@ -85,12 +89,16 @@ public sealed class OrderPlacementInput : IValidatableObject
     public OrderDraft? Draft { get; set; }
     public ReviewedPrice?[]? ReviewedPrices { get; set; } = [];
 
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext) => ValidateCore(false);
+
+    internal IEnumerable<ValidationResult> ValidateCounter() => ValidateCore(true);
+
+    private IEnumerable<ValidationResult> ValidateCore(bool optionalContacts)
     {
         if (Draft is null)
             yield return new ValidationResult("Supply the order draft.", [nameof(Draft)]);
         else
-            foreach (var issue in Draft.Validate(new ValidationContext(Draft)))
+            foreach (var issue in optionalContacts ? Draft.ValidateCounter() : Draft.Validate(new ValidationContext(Draft)))
                 yield return new ValidationResult(issue.ErrorMessage, issue.MemberNames.Select(name => $"Draft.{name}"));
 
         if (ReviewedPrices is null || ReviewedPrices.Length == 0)

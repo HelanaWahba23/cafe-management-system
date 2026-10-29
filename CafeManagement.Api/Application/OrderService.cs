@@ -13,10 +13,16 @@ namespace CafeManagement.Api.Application;
 
 public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
 {
-    public async Task<OrderPlacementOutcome> PlaceAsync(string? capability, OrderPlacementInput? input,
-        CancellationToken cancellationToken = default)
+    public Task<OrderPlacementOutcome> PlaceAsync(string? capability, OrderPlacementInput? input,
+        CancellationToken cancellationToken = default) => PlaceCoreAsync(capability, input, null, cancellationToken);
+
+    internal Task<OrderPlacementOutcome> PlaceCounterAsync(string? attempt, OrderPlacementInput? input,
+        string creator, CancellationToken ct) => PlaceCoreAsync(attempt, input, creator, ct);
+
+    private async Task<OrderPlacementOutcome> PlaceCoreAsync(string? capability, OrderPlacementInput? input,
+        string? creator, CancellationToken cancellationToken)
     {
-        var error = Prepare(capability, input?.Draft, out var draft);
+        var error = Prepare(capability, input?.Draft, out var draft, creator);
         if (error is not null) return new(null, error);
         // Snapshot the comparison vector before the first await, just like the immutable intent.
         var prices = input!.ReviewedPrices?.Select(p => p is null ? null : new ReviewedPrice
@@ -31,7 +37,7 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
             },
             ReviewedPrices = prices
         };
-        var issues = validation.Validate(new ValidationContext(validation)).ToArray();
+        var issues = (creator is null ? validation.Validate(new ValidationContext(validation)) : validation.ValidateCounter()).ToArray();
         if (issues.Length > 0)
             return new(null, new OperationError(OperationErrorKind.Invalid, "Review the selected product prices.",
                 FieldErrors: issues.SelectMany(issue => issue.MemberNames.Select(field =>
@@ -42,7 +48,7 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
         {
             await using var db = await factory.CreateDbContextAsync(cancellationToken);
             await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken);
-            var existing = await FindAsync(db, draft!.CapabilityHash, cancellationToken);
+            var existing = await FindAsync(db, draft!.CapabilityHash, cancellationToken, creator);
             if (existing is not null) return Replay(existing, draft.IntentHash);
 
             // Table/product reads retain their locks only through this short local acceptance.
@@ -60,7 +66,9 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
             {
                 CapabilityHash = draft.CapabilityHash, IntentHash = draft.IntentHash, Type = draft.Type,
                 TableId = tableId, TableLabel = review.Value.Table?.Label,
-                CustomerName = draft.CustomerName, CustomerPhone = draft.CustomerPhone,
+                Origin = creator is null ? OrderOrigin.Customer : OrderOrigin.Counter, CreatedByUserId = creator,
+                CustomerName = string.IsNullOrEmpty(draft.CustomerName) ? null : draft.CustomerName,
+                CustomerPhone = string.IsNullOrEmpty(draft.CustomerPhone) ? null : draft.CustomerPhone,
                 Total = ReadMoney(review.Value.Total)
             };
             foreach (var item in review.Value.Items)
@@ -85,7 +93,7 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
             try
             {
                 await using var recovery = await factory.CreateDbContextAsync(cancellationToken);
-                var winner = await FindAsync(recovery, draft!.CapabilityHash, cancellationToken);
+                var winner = await FindAsync(recovery, draft!.CapabilityHash, cancellationToken, creator);
                 return winner is null ? Uncertain() : Replay(winner, draft.IntentHash);
             }
             catch (Exception) { return Uncertain(); }
@@ -117,8 +125,9 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
         }
     }
 
-    private static Task<Order?> FindAsync(CafeDbContext db, byte[] hash, CancellationToken cancellationToken) =>
-        db.Orders.AsNoTracking().Include(order => order.Lines).SingleOrDefaultAsync(order => order.CapabilityHash == hash, cancellationToken);
+    private static Task<Order?> FindAsync(CafeDbContext db, byte[] hash, CancellationToken cancellationToken, string? creator = null) =>
+        db.Orders.AsNoTracking().Include(order => order.Lines).SingleOrDefaultAsync(order => order.CapabilityHash == hash
+            && (creator == null ? order.Origin == OrderOrigin.Customer : order.Origin == OrderOrigin.Counter && order.CreatedByUserId == creator), cancellationToken);
 
     private static OrderPlacementOutcome Replay(Order existing, byte[] intent) =>
         CryptographicOperations.FixedTimeEquals(existing.IntentHash, intent)
@@ -136,10 +145,16 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
             Money(line.UnitPrice), Money(line.LineTotal))).ToArray(), Money(order.Total), order.Status.ToString(),
         order.RejectionReason, order.CreatedAtUtc);
 
-    public async Task<(OrderReview? Value, OperationError? Error)> ReviewAsync(string? capability,
-        OrderDraft? input, CancellationToken cancellationToken = default)
+    public Task<(OrderReview? Value, OperationError? Error)> ReviewAsync(string? capability,
+        OrderDraft? input, CancellationToken cancellationToken = default) => ReviewCoreEntryAsync(capability, input, null, cancellationToken);
+
+    internal Task<(OrderReview? Value, OperationError? Error)> ReviewCounterAsync(string? attempt,
+        OrderDraft? input, string creator, CancellationToken ct) => ReviewCoreEntryAsync(attempt, input, creator, ct);
+
+    private async Task<(OrderReview? Value, OperationError? Error)> ReviewCoreEntryAsync(string? capability,
+        OrderDraft? input, string? creator, CancellationToken cancellationToken)
     {
-        var error = Prepare(capability, input, out var draft);
+        var error = Prepare(capability, input, out var draft, creator);
         if (error is not null) return (null, error);
 
         try
@@ -195,7 +210,7 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
         return (new OrderReview(draft.Type.ToString(), table, items.ToArray(), Money(total)), null);
     }
 
-    private static OperationError? Prepare(string? capability, OrderDraft? input, out PreparedDraft? prepared)
+    private static OperationError? Prepare(string? capability, OrderDraft? input, out PreparedDraft? prepared, string? creator = null)
     {
         prepared = null;
         if (!TryHashCapability(capability, out var capabilityHash))
@@ -213,7 +228,7 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
             Items = input.Items?.Select(item => item is null ? null : new OrderDraftItem
                 { ProductId = item.ProductId, Quantity = item.Quantity }).ToArray()
         };
-        var issues = snapshot.Validate(new ValidationContext(snapshot)).ToArray();
+        var issues = (creator is null ? snapshot.Validate(new ValidationContext(snapshot)) : snapshot.ValidateCounter()).ToArray();
         if (issues.Length > 0)
             return new OperationError(OperationErrorKind.Invalid, "Check the supplied order details.",
                 FieldErrors: issues.SelectMany(issue => issue.MemberNames.Select(field =>
@@ -223,6 +238,14 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
         var items = snapshot.Items!.Select(item => new DraftSelection(item!.ProductId, item.Quantity))
             .OrderBy(item => item.ProductId).ToArray();
         var type = Enum.Parse<OrderType>(snapshot.OrderType);
+        if (creator is not null)
+        {
+            using var counterBuffer = new MemoryStream();
+            using (var writer = new BinaryWriter(counterBuffer, Encoding.UTF8, leaveOpen: true))
+            { writer.Write("CafeManagement.CounterAttempt.v1"); writer.Write(creator); writer.Write(capabilityHash!); }
+            capabilityHash = SHA256.HashData(counterBuffer.GetBuffer().AsSpan(0, (int)counterBuffer.Length));
+            CryptographicOperations.ZeroMemory(counterBuffer.GetBuffer());
+        }
         prepared = new PreparedDraft(type, snapshot.TablePublicCode, snapshot.CustomerName, snapshot.CustomerPhone,
             items, capabilityHash!, HashIntent(type, snapshot.TablePublicCode, snapshot.CustomerName, snapshot.CustomerPhone, items));
         return null;

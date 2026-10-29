@@ -98,6 +98,9 @@ namespace CafeManagement.Api.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedByUserId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(3)
@@ -106,12 +109,10 @@ namespace CafeManagement.Api.Infrastructure.Persistence.Migrations
                         .IsFixedLength();
 
                     b.Property<string>("CustomerName")
-                        .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)");
 
                     b.Property<string>("CustomerPhone")
-                        .IsRequired()
                         .HasMaxLength(40)
                         .HasColumnType("nvarchar(40)");
 
@@ -120,6 +121,13 @@ namespace CafeManagement.Api.Infrastructure.Persistence.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("binary(32)")
                         .IsFixedLength();
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)")
+                        .HasDefaultValue("Customer");
 
                     b.Property<Guid>("Reference")
                         .HasColumnType("uniqueidentifier");
@@ -160,6 +168,8 @@ namespace CafeManagement.Api.Infrastructure.Persistence.Migrations
                     b.HasIndex("CapabilityHash")
                         .IsUnique();
 
+                    b.HasIndex("CreatedByUserId");
+
                     b.HasIndex("Reference")
                         .IsUnique();
 
@@ -169,11 +179,15 @@ namespace CafeManagement.Api.Infrastructure.Persistence.Migrations
 
                     b.ToTable("Orders", null, t =>
                         {
+                            t.HasCheckConstraint("CK_Orders_Creator", "([Origin] = N'Customer' AND [CreatedByUserId] IS NULL) OR ([Origin] = N'Counter' AND [CreatedByUserId] IS NOT NULL)");
+
                             t.HasCheckConstraint("CK_Orders_Currency", "[Currency] = 'EGP'");
 
-                            t.HasCheckConstraint("CK_Orders_CustomerName_NotBlank", "LEN(LTRIM(RTRIM([CustomerName]))) > 0");
+                            t.HasCheckConstraint("CK_Orders_CustomerName_NotBlank", "([Origin] = N'Counter' AND [CustomerName] IS NULL) OR ([CustomerName] IS NOT NULL AND LEN(LTRIM(RTRIM([CustomerName]))) > 0)");
 
-                            t.HasCheckConstraint("CK_Orders_CustomerPhone_NotBlank", "LEN(LTRIM(RTRIM([CustomerPhone]))) > 0");
+                            t.HasCheckConstraint("CK_Orders_CustomerPhone_NotBlank", "([Origin] = N'Counter' AND [CustomerPhone] IS NULL) OR ([CustomerPhone] IS NOT NULL AND LEN(LTRIM(RTRIM([CustomerPhone]))) > 0)");
+
+                            t.HasCheckConstraint("CK_Orders_Origin", "[Origin] IN (N'Customer', N'Counter')");
 
                             t.HasCheckConstraint("CK_Orders_RejectionReason", "([Status] = N'Rejected' AND [RejectionReason] IS NOT NULL AND LEN(LTRIM(RTRIM([RejectionReason]))) > 0) OR ([Status] <> N'Rejected' AND [RejectionReason] IS NULL)");
 
@@ -473,6 +487,11 @@ namespace CafeManagement.Api.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("CafeManagement.Api.Domain.Order", b =>
                 {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("CafeManagement.Api.Domain.CafeTable", "Table")
                         .WithMany()
                         .HasForeignKey("TableId")

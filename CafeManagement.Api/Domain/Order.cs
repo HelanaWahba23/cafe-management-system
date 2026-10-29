@@ -9,6 +9,7 @@ public sealed class Order
     public required OrderType Type { get; set; }
     public OrderOrigin Origin { get; set; } = OrderOrigin.Customer;
     public string? CreatedByUserId { get; set; }
+    public long PaymentRevision { get; set; }
     public int? TableId { get; set; }
     public CafeTable? Table { get; set; }
     public string? TableLabel { get; set; }

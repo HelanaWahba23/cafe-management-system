@@ -1,0 +1,15 @@
+# Current handoff —2026-10-29
+
+Entire five-feature project is authorized; continue automatically, including Feature005 despite Paymob setup blocker. Feature00322/22 validated and pushed as3a30dea. Feature00258/63;T021/T023/T046/T059/T063 pending. Feature001T051/T056 gaps unchanged. Preserve four original unfinished files:PublicLayout, TableMenu, PickupMenu, appsettings.Development.json.
+
+Feature004 spec/plan/research/contracts/tasks ready, core cash code validated (26 local checks,13 non-success HMAC/config checks, HTTP/browser cash receipt). AddPaymentLedger applied only owned validation copy; original DB untouched. All fixture cleanup/preservation passed. See validation.md. Real Paymob credentials/callback origin absent; no provider transaction simulated or verified.
+
+Prepared but unverified provider files:Application/PaymobClient.cs, PaymobPaymentService.cs, Controllers/PaymobWebhookController.cs, Pages/Payments/Return.razor, plus extra online actions/registration in PaymentsController.cs, Program.cs and PaymentPanel.razor. Keep these changes local until actual acceptance. Cash-only reviewed versions of those3 mixed files are saved under ignored artifacts/feature004-baseline/validated-* for partial staging without overwriting working files. Validate exact staged snapshot before commit. Do not stage all files blindly.
+
+Owned hosts:manual7268 PID14556 uses earlier F002 backend build on validation copy; Release7271 PID6228 uses validated POS candidate; newer debug7269 PID21188 was stopped for rebuild. Verify current PID command lines before stopping. Hidden launcher helper artifacts/feature004-baseline/start-ui.ps1 uses explicit DbConnectionStringBuilder setter/getter (PowerShell dictionary property assignment otherwise silently ignores override). Never print secrets. No old fixture-restoring launcher cleanup should be replayed blindly.
+
+Current ignored order-probe Program is preservation/cleanup; diagnostic backups under artifacts/feature004-baseline. Exact browser cash order86/referencead10812a-674a-44a1-bbbd-8ffdd2309122 was removed with its receipt. Payment tables empty. Source original/copy fingerprints saved in feature004-baseline/*.json; contains hashes only. Free C disk recently~590MB; reuse outputs.
+
+Next:build/publish exact staged cash-only snapshot, push validated milestone, then Feature005 Specify→Clarify→Plan→Tasks→Analyze→Implement, using actual Cash settlements as revenue and separately labelling/excluding sandbox. Provider work remains pending without credentials/publicHTTPS/real sandbox evidence; record conservative failed-intention lock limitations. Polish shared Blazor/Bootstrap UI without replacing preserved functionality or database data.
+
+Exact cash-only index snapshot built/published and passed12 HTTP checks on7272; unverified Paymob routes were confirmed absent. Owned snapshot host7272 PID19740 uses artifacts/cash-index-publish; stop only after matching its recorded command line. Final payment fixture cleanup already passed. Cash milestone ready for push; provider files/three mixed-file online additions remain uncommitted. Do not replace working files with staged versions.

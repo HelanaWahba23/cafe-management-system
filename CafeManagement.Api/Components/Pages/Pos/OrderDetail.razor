@@ -4,6 +4,7 @@
 @layout PosLayout
 @using CafeManagement.Api.Application
 @using CafeManagement.Api.Contracts
+@using CafeManagement.Api.Components.Shared
 @inject PosOrderService Orders
 @inject AuthenticationStateProvider Authentication
 
@@ -37,7 +38,7 @@
             <p class="text-secondary">Saved order amounts · Payment settlement is recorded separately.</p>
             <ul class="list-group list-group-flush">@foreach (var item in order.Items) { <li class="list-group-item px-0"><div class="d-flex flex-wrap justify-content-between gap-2"><strong class="text-break">@item.ProductName</strong><strong>@item.LineTotal EGP</strong></div><span class="text-secondary">@item.Quantity × @item.UnitPrice EGP</span></li> }</ul>
             <div class="d-flex flex-wrap justify-content-between gap-2 border-top pt-3 mt-3 fs-4"><strong>Total</strong><strong>@order.Total @order.Currency</strong></div>
-        </div></section>
+        </div><PaymentPanel @key="order.RowVersion" StaffOrderId="order.Id" CanRecordCash="@(order.Status != "Rejected")" OnPaymentChanged="LoadCore" /></section>
     </div>
 }
 

@@ -129,6 +129,9 @@ namespace CafeManagement.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(16)")
                         .HasDefaultValue("Customer");
 
+                    b.Property<long>("PaymentRevision")
+                        .HasColumnType("bigint");
+
                     b.Property<Guid>("Reference")
                         .HasColumnType("uniqueidentifier");
 
@@ -249,6 +252,123 @@ namespace CafeManagement.Api.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("CK_OrderLines_Quantity_Positive", "[Quantity] > 0");
 
                             t.HasCheckConstraint("CK_OrderLines_UnitPrice_Positive", "[UnitPrice] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("CafeManagement.Api.Domain.PaymentAttempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)");
+
+                    b.Property<int>("IntegrationId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsBlocking")
+                        .HasColumnType("bit");
+
+                    b.Property<long>("OrderId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ProtectedClientSecret")
+                        .HasMaxLength(4096)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProviderIntentionId")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<long?>("ProviderOrderId")
+                        .HasColumnType("bigint");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique()
+                        .HasFilter("[IsBlocking] = 1");
+
+                    b.HasIndex("ProviderOrderId")
+                        .IsUnique()
+                        .HasFilter("[ProviderOrderId] IS NOT NULL");
+
+                    b.ToTable("PaymentAttempts", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PaymentAttempts_Amount", "[Amount] > 0 AND [Currency] = 'EGP' AND [IntegrationId] > 0");
+
+                            t.HasCheckConstraint("CK_PaymentAttempts_ProviderOrder", "[ProviderOrderId] IS NULL OR [ProviderOrderId] > 0");
+
+                            t.HasCheckConstraint("CK_PaymentAttempts_State", "([State] IN (N'Creating', N'Pending', N'Uncertain') AND [IsBlocking] = 1) OR ([State] IN (N'Failed', N'Succeeded') AND [IsBlocking] = 0)");
+                        });
+                });
+
+            modelBuilder.Entity("CafeManagement.Api.Domain.PaymentSettlement", b =>
+                {
+                    b.Property<long>("OrderId")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.Property<long?>("ProviderTransactionId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("RecordedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RecordedByUserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("OrderId");
+
+                    b.HasIndex("ProviderTransactionId")
+                        .IsUnique()
+                        .HasFilter("[ProviderTransactionId] IS NOT NULL");
+
+                    b.HasIndex("RecordedAtUtc");
+
+                    b.HasIndex("RecordedByUserId");
+
+                    b.ToTable("PaymentSettlements", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PaymentSettlements_Amount", "[Amount] > 0 AND [Currency] = 'EGP'");
+
+                            t.HasCheckConstraint("CK_PaymentSettlements_Method", "([Method] = N'Cash' AND [RecordedByUserId] IS NOT NULL AND [ProviderTransactionId] IS NULL) OR ([Method] = N'PaymobSandbox' AND [RecordedByUserId] IS NULL AND [ProviderTransactionId] IS NOT NULL AND [ProviderTransactionId] > 0)");
                         });
                 });
 
@@ -517,6 +637,29 @@ namespace CafeManagement.Api.Infrastructure.Persistence.Migrations
                     b.Navigation("Order");
 
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("CafeManagement.Api.Domain.PaymentAttempt", b =>
+                {
+                    b.HasOne("CafeManagement.Api.Domain.Order", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CafeManagement.Api.Domain.PaymentSettlement", b =>
+                {
+                    b.HasOne("CafeManagement.Api.Domain.Order", null)
+                        .WithOne()
+                        .HasForeignKey("CafeManagement.Api.Domain.PaymentSettlement", "OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", null)
+                        .WithMany()
+                        .HasForeignKey("RecordedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("CafeManagement.Api.Domain.Product", b =>

@@ -20,6 +20,7 @@
 @if (order is not null)
 {
     <OrderDetails Order="order" />
+    <PaymentPanel @key="capability" Capability="capability" />
     <p>Anyone with your private link can view this order. Keep a copy to retain access.</p>
     <button type="button" class="btn btn-outline-primary me-2" disabled="@busy" @onclick="CopyAsync">Copy private link</button>
 }

@@ -11,6 +11,8 @@ public sealed class CafeDbContext(DbContextOptions<CafeDbContext> options) : Ide
     public DbSet<CafeTable> CafeTables => Set<CafeTable>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderLine> OrderLines => Set<OrderLine>();
+    public DbSet<PaymentAttempt> PaymentAttempts => Set<PaymentAttempt>();
+    public DbSet<PaymentSettlement> PaymentSettlements => Set<PaymentSettlement>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

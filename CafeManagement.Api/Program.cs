@@ -68,6 +68,8 @@ builder.Services.AddScoped<TableQrService>();
 builder.Services.AddScoped<PublicMenuService>();
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<PosOrderService>();
+builder.Services.AddScoped<PaymentService>();
+builder.Services.Configure<PaymobOptions>(builder.Configuration.GetSection("Paymob"));
 builder.Services.AddScoped<CartState>();
 builder.Services.AddOptions<PublicMenuOptions>()
     .Bind(builder.Configuration)
@@ -142,9 +144,10 @@ app.Use(async (context, next) =>
     var documentPath = path.Value?.TrimEnd('/');
     var privateDocument = path.StartsWithSegments("/menu/t")
         || string.Equals(documentPath, "/menu/pickup", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(documentPath, "/orders/track", StringComparison.OrdinalIgnoreCase);
+        || string.Equals(documentPath, "/orders/track", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(documentPath, "/payments/return", StringComparison.OrdinalIgnoreCase);
     if (privateDocument || path.StartsWithSegments("/api/orders")
-        || path.StartsWithSegments("/pos") || path.StartsWithSegments("/api/pos"))
+        || path.StartsWithSegments("/pos") || path.StartsWithSegments("/api/pos") || path.StartsWithSegments("/api/payments"))
     {
         // OnStarting also preserves these headers when downstream error handling clears a response.
         context.Response.OnStarting(() =>

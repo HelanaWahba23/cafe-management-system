@@ -251,7 +251,7 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
         return null;
     }
 
-    private static bool TryHashCapability(string? capability, out byte[]? hash)
+    internal static bool TryHashCapability(string? capability, out byte[]? hash)
     {
         hash = null;
         if (capability is null || capability.Length != 43

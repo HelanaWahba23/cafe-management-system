@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Data;
 using System.Security.Claims;
 using CafeManagement.Api.Contracts;
 using CafeManagement.Api.Domain;
@@ -78,14 +79,19 @@ public sealed class PosOrderService(IDbContextFactory<CafeDbContext> factory, St
             try { expected = Convert.FromBase64String(version); }
             catch (Exception ex) when (ex is FormatException or ArgumentNullException) { return (null, Invalid("Reload the order before changing status.")); }
             if (expected.Length != 8) return (null, Invalid("Reload the order before changing status."));
-            var order = await db.Orders.Include(o => o.Lines).SingleOrDefaultAsync(o => o.Id == id, ct);
+            await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+            var order = await PaymentRules.LockOrderAsync(db, id, ct);
             if (order is null) return (null, Missing());
             if (!order.RowVersion.SequenceEqual(expected)) return (null, Stale());
+            if (next == OrderStatus.Rejected && await PaymentRules.BlocksRejectionAsync(db, id, ct))
+                return (null, new(OperationErrorKind.Conflict, "Paid orders cannot be rejected. Reconcile any pending or uncertain payment first.", "payment_conflict"));
             if (!OrderLifecycle.TryTransition(order, next, reason))
                 return (null, Invalid("This transition is not allowed. Rejection requires a reason of 1–500 characters while Submitted."));
             db.Entry(order).Property(o => o.RowVersion).OriginalValue = expected;
             try { await db.SaveChangesAsync(ct); }
             catch (DbUpdateConcurrencyException) { return (null, Stale()); }
+            await db.Entry(order).Collection(o => o.Lines).LoadAsync(ct);
+            await tx.CommitAsync(ct);
             return (Project(order), null);
         }, ct);
     }

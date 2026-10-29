@@ -47,7 +47,7 @@
 - [x] T019 Validate keyboard, empty/error/busy states and actual 320/768/desktop POS layouts; refine CafeManagement.Api/Components/Pages/Pos/ and Layout/PosLayout.razor; record any blocked native checks in specs/003-cashier-pos/validation.md (after T016/T018; FR-009, SC-005).
 - [x] T020 Run restore/build, Release build/publish, security/diff review and final database/account/QR preservation; record specs/003-cashier-pos/validation.md (after T019; FR-001/010, SC-006).
 - [x] T021 Update setup and accurate implementation handoff in specs/003-cashier-pos/quickstart.md and implementation-handoff.md, reconcile every FR/SC and leave unverified tasks pending (after T020; all FR/SC).
-- [ ] T022 Commit/push only validated Feature 003 paths, preserving Feature 002 unfinished files; record commit in specs/003-cashier-pos/implementation-handoff.md (after validated batches; SC-006).
+- [x] T022 Commit/push only validated Feature 003 paths, preserving Feature 002 unfinished files; record commit in specs/003-cashier-pos/implementation-handoff.md (after validated batches; SC-006).
 
 ## Dependencies and parallel opportunities
 

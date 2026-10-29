@@ -26,7 +26,7 @@ else if (saved is not null)
 else if (catalog is not null)
 {
     <form @onsubmit="NoSubmit" @onsubmit:preventDefault="true" data-order-write="true">
-    <fieldset disabled="@(busy || frozen)"><legend class="visually-hidden">Walk-in details and products</legend>
+    <fieldset disabled="@(busy || frozen || !interactiveReady)"><legend class="visually-hidden">Walk-in details and products</legend>
     <div class="row g-3 mb-4">
         <div class="col-md-6"><label for="counter-type" class="form-label">Fulfillment</label><select id="counter-type" class="form-select" @bind="mode" @bind:after="Changed"><option value="Pickup">Takeaway</option><option value="DineIn">Dine-in</option></select></div>
         @if (mode == "DineIn") { <div class="col-md-6"><label for="counter-table" class="form-label">Existing table</label><select id="counter-table" class="form-select" @bind="tableCode" @bind:after="Changed"><option value="">Choose a table</option>@foreach (var table in tables) { <option value="@table.PublicCode.ToString()">@table.Label</option> }</select></div> }
@@ -83,7 +83,7 @@ else if (catalog is not null)
     private string? leaveTarget;
     private ElementReference stayButton;
     private bool focusLeave;
-    private bool disposed;
+    private bool disposed, interactiveReady;
     private readonly string guardId = Guid.NewGuid().ToString("N");
     private sealed record Selection(PublicMenuProduct Product, int Quantity);
     protected override async Task OnInitializedAsync()
@@ -126,6 +126,7 @@ else if (catalog is not null)
             navigationGuard ??= await JS.InvokeAsync<IJSObjectReference>("import", "/js/pos-navigation.js");
             if (disposed) return;
             await navigationGuard.InvokeVoidAsync("update", guardId, cart.Count > 0 && saved is null, busy, guardCallback);
+            if (!interactiveReady) { interactiveReady = true; StateHasChanged(); }
         }
         catch (JSDisconnectedException) { }
     }

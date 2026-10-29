@@ -120,3 +120,7 @@ T040/T052/T056/T060 still include deferred component/dependency checks and remai
 
 The user deferred browser checks and asked not to be prompted repeatedly. No background run
 or recurring automation is active for this handoff.
+
+## Current superseding handoff — 2026-10-29
+
+Feature002 is61/63 after all four isolated Playwright native navigation cases passed. The three preserved UI files PublicLayout/TableMenu/PickupMenu are now validated for delivery; existing checkout/price/recovery/private tracking/responsive evidence is in end-to-end-validation.md. Do not repeat the old blocked native/manual request. Only actual-phone T059 and final T063 remain pending. Feature001 retains54/56 (T051/T056). Feature003 is22/22, Feature004 cash10/16 with actual Paymob sandbox acceptance pending, and Feature005 report/theme milestone8657b2e is pushed. Prepared Paymob source/online hunks remain local and unverified. Main original-DB host7128 is healthy; manual7268 stays running. See Feature005 handoff and README for current migrations/backup/security evidence. Preserve all provider files and do not fabricate receipts or release uncertain attempts without verified reconciliation.

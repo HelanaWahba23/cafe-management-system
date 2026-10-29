@@ -1,0 +1,64 @@
+@page "/menu/pickup"
+@attribute [AllowAnonymous]
+@rendermode InteractiveServer
+@layout PublicLayout
+@using CafeManagement.Api.Components.Shared
+@using CafeManagement.Api.Application
+@using CafeManagement.Api.Contracts
+@using CafeManagement.Api.Domain
+@using Microsoft.JSInterop
+@inject PublicMenuService Menu
+@inject CartState cart
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Pickup menu | Cafe Management</PageTitle>
+<h1>Pickup menu</h1>
+<p>Order for pickup at the cafe. No table QR code is needed.</p>
+<NavigationLock ConfirmExternalNavigation="@(cart.Items.Count > 0)" OnBeforeInternalNavigation="BeforeNavigationAsync" />
+@if (loading) { <p role="status">Loading menu…</p> }
+else if (failure is not null) { <p class="alert alert-danger" role="alert">@failure.Message</p> }
+else if (menu is not null)
+{
+    @if (addError is not null) { <p class="alert alert-danger" role="alert">@addError</p> }
+    <fieldset disabled="@checkoutBusy" class="border-0 p-0" style="min-width: 0;">
+        <div class="row g-3">
+            <div class="col-12 col-lg-8"><MenuCatalog Categories="menu.Categories" Currency="@menu.Currency" OnAdd="AddProduct" /></div>
+            <div class="col-12 col-lg-4"><CartPanel Cart="cart" OnChanged="() => addError = null" OnValidationChanged="value => cartInvalid = value" /></div>
+        </div>
+    </fieldset>
+    <CheckoutPanel Cart="cart" HasCartErrors="cartInvalid" BusyChanged="value => checkoutBusy = value" OnSaved="() => cart.Clear()" />
+}
+<button type="button" class="btn btn-outline-secondary mt-3" disabled="@(loading || checkoutBusy)" @onclick="LoadAsync">@(failure is null ? "Reload menu" : "Retry loading menu")</button>
+
+@code {
+    private PickupMenuDetails? menu;
+    private OperationError? failure;
+    private string? addError;
+    private bool loading = true, checkoutBusy, cartInvalid;
+    private int loadVersion;
+    protected override Task OnInitializedAsync() => LoadAsync();
+    private async Task LoadAsync()
+    {
+        var version = ++loadVersion; loading = true; menu = null; failure = null; addError = null;
+        var result = await Menu.GetPickupAsync();
+        if (version != loadVersion) return;
+        menu = result.Value; failure = result.Error;
+        if (menu is not null) cart.SetContext(OrderType.Pickup, null);
+        loading = false;
+    }
+    private void AddProduct(int productId)
+    {
+        var product = menu?.Categories.SelectMany(c => c.Products).SingleOrDefault(p => p.Id == productId);
+        if (loading || product is null) { addError = "This product is no longer available. Reload the menu."; return; }
+        cart.TryAdd(product, out addError);
+    }
+    private async Task BeforeNavigationAsync(LocationChangingContext context)
+    {
+        var current = new Uri(Navigation.Uri); var target = Navigation.ToAbsoluteUri(context.TargetLocation);
+        if (cart.Items.Count == 0 || Uri.Compare(current, target, UriComponents.SchemeAndServer | UriComponents.PathAndQuery,
+                UriFormat.UriEscaped, StringComparison.Ordinal) == 0) return;
+        if (await JS.InvokeAsync<bool>("confirm", "Leaving this menu clears your unsubmitted cart. Leave this menu?")) cart.Clear();
+        else context.PreventNavigation();
+    }
+}

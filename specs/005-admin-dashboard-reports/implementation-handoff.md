@@ -27,3 +27,7 @@ The retry passed and exact order98/children are cleaned. Prior original/copy fin
 ## Current verified delivery checkpoint
 
 Supersedes historical pending items above: final HTTP14, dependency audit, full-source Debug/Release/publish, exact cash-only staged Release build/publish, fixture cleanup and original/copy preservation have passed. Main host7128 PID17112 and QA7273 PID9024 run artifacts/dashboard-review-publish; manual7268 PID14556 remains available. Obsolete7271/7272 hosts are stopped. No credential/provider success was fabricated. Native four-case Playwright validation also passed; customer UI can now be delivered separately after reviewing its preserved diff. Final report/theme commit is being recorded next. Only the actual provider credentials/public callback and physical-phone acceptance remain external gates.
+
+## Delivered report/theme milestone
+
+Validated code and documentation committed as8657b2e and pushed to origin/master. T012 complete; Feature00512/12. Subsequent native navigation validation now permits the separately preserved customer UI milestone; physical-phone and real Paymob sandbox gates remain pending. Any earlier permission/fixture/native blockers in historical checkpoint paragraphs above are resolved as explicitly recorded later.

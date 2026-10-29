@@ -31,7 +31,7 @@ Independent acceptance:customer,POS,Admin,login share coherent readable theme an
 ## Phase5 Integration / delivery
 
 - [x] T011 Runrestore/Debug/Release/publish,authorization/privacy/diffreview andfinaloriginal/copy preservation; reconcilecross-featuretaskstatus andwrite README.md setup/currentblockers plus specs/005-admin-dashboard-reports/implementation-handoff.md (afterT010; FR-008,SC-004).
-- [ ] T012 Commit/pushonlyvalidatedreport/theme/setup changes; keepunverifiedPaymob andFeature002 UIunchanged/unstaged,recordmilestone in specs/005-admin-dashboard-reports/implementation-handoff.md (afterT011; SC-004).
+- [x] T012 Commit/pushonlyvalidatedreport/theme/setup changes; keepunverifiedPaymob andFeature002 UIunchanged/unstaged,recordmilestone in specs/005-admin-dashboard-reports/implementation-handoff.md (afterT011; SC-004).
 
 ## Dependencies / strategy
 

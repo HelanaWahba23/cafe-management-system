@@ -7,12 +7,12 @@ A single ASP.NET Core 8 application with Blazor Server interfaces, Bootstrap, EF
 | Feature | Validated tasks | Status |
 | --- | ---: | --- |
 | Menu & Table Management | 54/56 | Implemented; physical-phone QR and final acceptance remain pending. |
-| Customer Ordering | 58/63 | Checkout, reconfirmation, duplicate recovery and private tracking work locally. Native navigation and phone acceptance remain pending; affected UI changes are preserved locally. |
+| Customer Ordering | 61/63 | Dine-in, pickup, checkout, reconfirmation, duplicate recovery, private tracking and native navigation validated. Physical-phone and final acceptance remain pending. |
 | Cashier & POS | 22/22 | Validated and pushed as `3a30dea`. |
 | Payments & Billing | 10/16 | Validated cash ledger/UI pushed as `0b9038c`. Paymob sandbox implementation is prepared locally and unverified. |
-| Admin Dashboard & Reports | 11/12 | Report backend, shared responsive theme, builds, security and preservation validated; commit/push pending. |
+| Admin Dashboard & Reports | 12/12 | Reports, responsive theme, builds, authorization and preservation validated; pushed as `8657b2e`. |
 
-This is an implementation checkpoint, not a claim that all five features are accepted. The latest pushed milestone is `0b9038c`. Read the implementation handoffs before resuming work or changing a running host.
+This is an implementation checkpoint, not a claim that all five features are accepted. The report/theme milestone is `8657b2e`; the customer UI continuation is recorded in its handoff. Read the implementation handoffs before resuming work or changing a running host.
 
 ## Run locally
 
@@ -47,7 +47,7 @@ Entry points in the complete working tree:
 - `/admin/dashboard`: Admin order and cash reports.
 - `/admin/categories`, `/admin/products`, `/admin/tables`: existing management.
 
-Some customer UI and the dashboard are still local pending their remaining acceptance/push gates. The pushed cash milestone deliberately excludes unverified Paymob endpoints. The existing `CafeManagement` development database received the reviewed `AddCounterOrders` and `AddPaymentLedger` migrations after a fresh COPY_ONLY/CHECKSUM backup and RESTORE VERIFYONLY. Prior row/account/QR fingerprints were preserved. For another environment, confirm the target and repeat backup/preservation before applying migrations.
+Customer UI native navigation is now accepted and the dashboard is pushed. The pushed cash milestone deliberately excludes unverified Paymob endpoints. The existing `CafeManagement` development database received the reviewed `AddCounterOrders` and `AddPaymentLedger` migrations after a fresh COPY_ONLY/CHECKSUM backup and RESTORE VERIFYONLY. Prior row/account/QR fingerprints were preserved. For another environment, confirm the target and repeat backup/preservation before applying migrations.
 
 ## Staff accounts
 
@@ -105,12 +105,12 @@ dotnet publish CafeManagement.Api -c Release --no-restore -o artifacts/cafe
 No automated test framework was added. Focused temporary diagnostics used an owned database copy and removed only their recorded fixture rows. Evidence records exact successes and blockers:
 
 - [Customer ordering evidence](specs/002-customer-ordering/end-to-end-validation.md).
-- [Pending native/phone checks](specs/002-customer-ordering/pending-browser-validation.md).
+- [Pending phone acceptance](specs/002-customer-ordering/pending-browser-validation.md).
 - [POS evidence](specs/003-cashier-pos/validation.md).
 - [Cash/payment evidence](specs/004-payments-billing/validation.md).
 - [Dashboard handoff](specs/005-admin-dashboard-reports/implementation-handoff.md).
 
-Still required: native Reload → Stay/Leave results, real-phone QR/rescan/pickup/private-link checks on an approved reachable HTTPS origin, actual Paymob sandbox setup/confirmation, and the remaining final integration/push checks. Local responsive emulation and cryptographic vectors do not replace these checks.
+Still required: real-phone QR/rescan/pickup/private-link checks on an approved reachable HTTPS origin and actual Paymob sandbox setup/confirmation. Native Reload/Pickup Stay/Leave passed in isolated Edge. Local responsive emulation and cryptographic vectors do not replace the remaining external checks.
 
 ## Resume safely
 

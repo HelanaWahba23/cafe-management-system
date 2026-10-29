@@ -5,10 +5,15 @@
 @using CafeManagement.Api.Components.Shared
 @using CafeManagement.Api.Application
 @using CafeManagement.Api.Contracts
+@using Microsoft.JSInterop
 @inject PublicMenuService Menu
+@inject CartState cart
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <PageTitle>Menu | Cafe Management</PageTitle>
 <h1>Menu</h1>
+<NavigationLock ConfirmExternalNavigation="@(cart.Items.Count > 0)" OnBeforeInternalNavigation="BeforeNavigationAsync" />
 @if (loading)
 {
     <p role="status">Loading menu…</p>
@@ -24,16 +29,19 @@ else if (menu is not null)
     {
         <div class="alert alert-danger" role="alert">@addError</div>
     }
+    <fieldset disabled="@checkoutBusy" class="border-0 p-0" style="min-width: 0;">
     <div class="row g-3">
         <div class="col-12 col-lg-8">
             <MenuCatalog Categories="menu.Categories" Currency="@menu.Currency" OnAdd="AddProduct" />
         </div>
         <div class="col-12 col-lg-4">
-            <CartPanel Cart="cart" OnChanged="CartChanged" />
+            <CartPanel Cart="cart" OnChanged="CartChanged" OnValidationChanged="value => cartInvalid = value" />
         </div>
     </div>
+    </fieldset>
+    <CheckoutPanel Cart="cart" TableLabel="@menu.Table.Label" HasCartErrors="cartInvalid" BusyChanged="value => checkoutBusy = value" OnSaved="OrderSaved" />
 }
-<button type="button" class="btn btn-outline-secondary" disabled="@loading" @onclick="LoadAsync">@(failure?.Kind == OperationErrorKind.Unexpected ? "Retry loading menu" : "Reload menu")</button>
+<button type="button" class="btn btn-outline-secondary" disabled="@(loading || checkoutBusy)" @onclick="LoadAsync">@(failure?.Kind == OperationErrorKind.Unexpected ? "Retry loading menu" : "Reload menu")</button>
 
 @code {
     [Parameter] public string? PublicCode { get; set; }
@@ -41,8 +49,9 @@ else if (menu is not null)
     private OperationError? failure;
     private bool loading = true;
     private int loadVersion;
-    private readonly CartState cart = new();
     private string? addError;
+    private bool checkoutBusy;
+    private bool cartInvalid;
 
     protected override Task OnParametersSetAsync() => LoadAsync();
 
@@ -75,4 +84,21 @@ else if (menu is not null)
     }
 
     private void CartChanged() => addError = null;
+    private void OrderSaved() => cart.Clear();
+
+    private async Task BeforeNavigationAsync(LocationChangingContext context)
+    {
+        var current = new Uri(Navigation.Uri);
+        var target = Navigation.ToAbsoluteUri(context.TargetLocation);
+        // Category fragments only move within this document and must retain the cart.
+        if (cart.Items.Count == 0 || Uri.Compare(current, target, UriComponents.SchemeAndServer | UriComponents.PathAndQuery,
+                UriFormat.UriEscaped, StringComparison.Ordinal) == 0)
+            return;
+
+        var leave = await JS.InvokeAsync<bool>("confirm", "Leaving this menu clears your unsubmitted cart. Leave this menu?");
+        if (!leave)
+            context.PreventNavigation();
+        else
+            cart.Clear();
+    }
 }

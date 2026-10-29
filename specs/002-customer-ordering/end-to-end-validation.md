@@ -134,3 +134,9 @@ SC-001/003/004/005/007/008 have the corresponding cart, deduplication, price, li
 preservation and guest/privacy evidence above. SC-002 and SC-006 have browser journey/layout
 evidence but retain the actual-phone QR/private-link gate. Native navigation acceptance and
 all source integration must also be settled before T063 can certify full completion.
+
+## Native navigation gate resolved — 2026-10-29
+
+All four native beforeunload cases passed using standard Playwright1.64.1 with installed Edge156.0.4314.50 in a fresh isolated headless profile. Browser sandbox and normal certificate checks stayed enabled. The HTTPS7128 table route loaded normally; warning dialogs were observed, not replaced or disabled. Stay preserved cart/table for reload and pickup; reload Leave cleared cart with correct table; pickup Leave cleared cart and opened pickup without table. No order/payment was submitted and no existing user browser profile was accessed. The first diagnostic click preceded Blazor interactivity and a canceled reload correctly caused a navigation timeout; the final complete run waited for interactive rendering and verified each resulting DOM state. Four of four cases passed. T021/T023/T046 are accepted with the earlier full US1/responsive/backend evidence. Only phone T059 and final T063 remain pending.
+
+The same four cases also passed against the independently built/published cash-only commit candidate on owned port7274, with unverified Paymob source excluded. Its14-check HTTP role/privacy/date/style/public-route matrix passed. A final read-only original/copy fingerprint comparison passed after these checks. The main7128 host remains running unchanged for local review.

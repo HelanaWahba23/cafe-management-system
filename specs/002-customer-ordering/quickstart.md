@@ -1,5 +1,7 @@
 ## Approved acceptance-mode revision —2026-10-30
 
+Customer entry correction2026-10-30: local launch profiles open `menu/pickup`; GET `/` redirects to `/menu/pickup` without login. `/swagger` remains a Development-only developer tool. Verify root redirect and anonymous pickup rendering after changing startup routing; no data/auth/payment changes.
+
 The user explicitly approved automated mobile-browser emulation instead of a physical Android device for this portfolio's remaining acceptance. References to phone scan/mobile journeys in acceptance scenarios are fulfilled by decoding the actual generated QR PNGs and navigating their URLs in a fresh signed-out touch/mobile browser context over trusted loopback HTTPS. Verify two table contexts, saved QR after label rename, direct pickup and private tracking/revisit/privacy. Use only the isolated validation database copy and preserve all original/copy records after exact fixture cleanup. This does not claim Android hardware, camera, physical Chrome or real-phone network acceptance. No public deployment/tunnel/certificate/firewall change is needed or authorized.
 
 # Quickstart and Manual Validation: Customer Ordering
@@ -161,3 +163,5 @@ mark Feature 001 T051/T056 complete. Desktop simulation cannot substitute for ph
 See [API contract](contracts/api.md), [UI contract](contracts/ui.md) and
 [data model](data-model.md) for exact interfaces and consistency rules. No automated tests are
 required by default; a specific diagnosed bug or explicit user request is needed to add them.
+
+Customer entry validation: Release build passed zero warnings/errors; all three launch profiles checked; GET / returned302 to /menu/pickup, anonymous pickup returned200 and Development Swagger returned200 over trusted loopback HTTPS7279. No data writes; verified test host stopped.

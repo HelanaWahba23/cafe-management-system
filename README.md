@@ -43,6 +43,7 @@ HTTPS profile listens on https://localhost:7128. PublicWebBaseUrl must match the
 
 ## Entry points
 
+- `/`: opens the customer pickup menu. Local launch profiles also open this customer interface; Swagger remains available at `/swagger` in Development only. GitHub displays source/README and does not host this ASP.NET application automatically.
 - `/menu/pickup`: direct customer pickup.
 - `/menu/t/{publicCode}`: existing table QR dine-in menu.
 - `/orders/track#key=…`: private tracking/bill link from checkout; keep it private.

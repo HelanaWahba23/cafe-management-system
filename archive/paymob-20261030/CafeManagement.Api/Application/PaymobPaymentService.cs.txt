@@ -1,0 +1,207 @@
+using System.Data;
+using System.Security.Claims;
+using System.Text.Json;
+using CafeManagement.Api.Contracts;
+using CafeManagement.Api.Domain;
+using CafeManagement.Api.Infrastructure.Persistence;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+
+namespace CafeManagement.Api.Application;
+
+public sealed class PaymobPaymentService(IDbContextFactory<CafeDbContext> factory, PaymobClient client,
+    IOptions<PaymobOptions> options, IDataProtectionProvider protection, PaymentService payments, StaffAccess staff)
+{
+    private readonly IDataProtector protector = protection.CreateProtector("CafeManagement.Paymob.Checkout.v1");
+
+    public async Task<OnlinePaymentOutcome> StartAsync(string? capability, CancellationToken ct = default)
+    {
+        Guid? ownedAttempt = null;
+        try
+        {
+            PaymentAttempt attempt; Order snapshot;
+            await using (var db = await factory.CreateDbContextAsync(ct))
+            {
+                var id = await PaymentService.FindCustomerIdAsync(db, capability, ct);
+                if (id is null) return new(null, null, Missing());
+                if (!options.Value.IsReady) return new(null, null, Unavailable());
+                await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+                var order = await PaymentRules.LockOrderAsync(db, id.Value, ct);
+                if (order is null) return new(null, null, Missing());
+                if (order.Status == OrderStatus.Rejected) return new(null, null, Conflict("Rejected orders cannot be paid."));
+                if (await db.PaymentSettlements.AnyAsync(p => p.OrderId == id, ct))
+                    return new(null, null, Conflict("This order is already paid."));
+                if (await db.PaymentAttempts.AnyAsync(p => p.OrderId == id && p.IsBlocking, ct))
+                    return new(null, null, Conflict("An online attempt already exists. Check its outcome before any further payment."));
+                attempt = new() { OrderId = order.Id, Amount = order.Total, Currency = order.Currency, IntegrationId = options.Value.IntegrationId };
+                db.PaymentAttempts.Add(attempt);
+                order.PaymentRevision = checked(order.PaymentRevision + 1);
+                await db.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
+                ownedAttempt = attempt.Id; snapshot = order;
+            }
+
+            // Never hold a SQL transaction over the provider request, and never retry this POST.
+            var created = await client.CreateAsync(attempt, snapshot, ct);
+            await using (var db = await factory.CreateDbContextAsync(ct))
+            {
+                await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+                var order = await PaymentRules.LockOrderAsync(db, attempt.OrderId, ct);
+                if (order is null) return new(null, null, Missing());
+                var saved = await db.PaymentAttempts.SingleAsync(p => p.Id == attempt.Id, ct);
+                if (saved.ProviderOrderId is not null && saved.ProviderOrderId != created.OrderId)
+                    return new(null, null, Conflict("Provider evidence differs. Reconciliation is required."));
+                saved.ProviderOrderId = created.OrderId; saved.ProviderIntentionId = created.Id;
+                saved.ProtectedClientSecret = protector.Protect(created.ClientSecret);
+                saved.UpdatedAtUtc = DateTime.UtcNow;
+                var settled = await db.PaymentSettlements.AnyAsync(p => p.OrderId == order.Id, ct);
+                if (settled) saved.ProtectedClientSecret = null;
+                if (!settled) { saved.State = "Pending"; saved.IsBlocking = true; }
+                order.PaymentRevision = checked(order.PaymentRevision + 1);
+                await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
+                if (settled) return new((await payments.GetGuestAsync(capability, ct)).Value, null, null);
+            }
+            var checkout = "https://accept.paymob.com/unifiedcheckout/?publicKey=" + Uri.EscapeDataString(options.Value.PublicKey)
+                + "&clientSecret=" + Uri.EscapeDataString(created.ClientSecret);
+            return new((await payments.GetGuestAsync(capability, ct)).Value, checkout, null);
+        }
+        catch (Exception)
+        {
+            if (ownedAttempt is { } id) await MarkUncertainAsync(id);
+            return new(null, null, Uncertain());
+        }
+    }
+
+    public async Task<OnlinePaymentOutcome> ReconcileGuestAsync(string? capability, CancellationToken ct = default)
+    {
+        try
+        {
+            await using var db = await factory.CreateDbContextAsync(ct);
+            var id = await PaymentService.FindCustomerIdAsync(db, capability, ct);
+            if (id is null) return new(null, null, Missing());
+            var error = await ReconcileAsync(id.Value, ct);
+            return new((await payments.GetGuestAsync(capability, ct)).Value, null, error);
+        }
+        catch (Exception) { return new(null, null, Uncertain()); }
+    }
+
+    public async Task<OperationError?> ReconcileStaffAsync(ClaimsPrincipal principal, long id, CancellationToken ct = default)
+    {
+        try
+        {
+            var access = await staff.CheckCashierAsync(principal);
+            if (access != StaffAccessResult.Allowed) return new(access == StaffAccessResult.Unauthenticated
+                ? OperationErrorKind.Unauthenticated : OperationErrorKind.Forbidden, "Current cashier access is required.");
+            return await ReconcileAsync(id, ct);
+        }
+        catch (Exception) { return Uncertain(); }
+    }
+
+    private async Task<OperationError?> ReconcileAsync(long id, CancellationToken ct)
+    {
+        if (!options.Value.IsReady) return Unavailable();
+        PaymentAttempt? attempt;
+        await using (var db = await factory.CreateDbContextAsync(ct))
+        {
+            if (!await db.Orders.AnyAsync(o => o.Id == id, ct)) return Missing();
+            if (await db.PaymentSettlements.AnyAsync(p => p.OrderId == id, ct)) return null;
+            attempt = await db.PaymentAttempts.AsNoTracking().SingleOrDefaultAsync(p => p.OrderId == id && p.IsBlocking, ct);
+        }
+        if (attempt is null) return null;
+        var response = await client.InquireAsync(attempt, ct);
+        if (response is null) return Conflict("No verified final outcome is available. Keep this payment attempt for reconciliation.");
+        var transaction = response.Value.TryGetProperty("obj", out var obj) ? obj : response.Value;
+        if (!PaymobClient.TryReadEvidence(transaction, out var evidence) || evidence is null || !MatchesInquiry(attempt, evidence))
+            return Conflict("The provider outcome could not be verified for this payment attempt.");
+        if (attempt.ProviderOrderId is null)
+        {
+            // Only authenticated inquiry may bind a previously unknown provider order.
+            if (!transaction.GetProperty("order").TryGetProperty("merchant_order_id", out var reference)
+                || reference.GetString() != attempt.Id.ToString("N")) return Conflict("The provider reference could not be verified.");
+            await using var db = await factory.CreateDbContextAsync(ct);
+            await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+            var order = await PaymentRules.LockOrderAsync(db, attempt.OrderId, ct);
+            var saved = await db.PaymentAttempts.SingleAsync(p => p.Id == attempt.Id, ct);
+            if (order is null || evidence.AmountCents != checked((long)(saved.Amount * 100m))
+                || evidence.IntegrationId != saved.IntegrationId || evidence.Currency != saved.Currency)
+                return Conflict("The provider amounts or integration do not match.");
+            if (saved.ProviderOrderId is not null && saved.ProviderOrderId != evidence.OrderId) return Conflict("The provider order differs.");
+            saved.ProviderOrderId = evidence.OrderId; saved.UpdatedAtUtc = DateTime.UtcNow;
+            order.PaymentRevision = checked(order.PaymentRevision + 1);
+            await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
+        }
+        return await ApplyEvidenceAsync(evidence!, ct);
+    }
+
+    internal static bool MatchesInquiry(PaymentAttempt attempt, PaymobEvidence evidence) =>
+        !evidence.IsLive && evidence.OrderId > 0
+        && (attempt.ProviderOrderId is null || attempt.ProviderOrderId == evidence.OrderId)
+        && evidence.AmountCents == checked((long)(attempt.Amount * 100m))
+        && evidence.Currency == attempt.Currency && evidence.IntegrationId == attempt.IntegrationId;
+
+    public async Task<OperationError?> WebhookAsync(JsonElement body, string? signature, CancellationToken ct = default)
+    {
+        if (!options.Value.IsReady) return Unavailable();
+        if (!PaymobClient.VerifyHmac(body, signature, options.Value.HmacSecret, out var evidence))
+            return new(OperationErrorKind.Invalid, "Invalid provider evidence.");
+        try { return await ApplyEvidenceAsync(evidence!, ct); }
+        catch (Exception) { return Uncertain(); }
+    }
+
+    private async Task<OperationError?> ApplyEvidenceAsync(PaymobEvidence evidence, CancellationToken ct)
+    {
+        if (evidence.IsLive || evidence.IntegrationId != options.Value.IntegrationId || evidence.Currency != "EGP")
+            return Conflict("Only the configured sandbox integration is supported.");
+        await using var db = await factory.CreateDbContextAsync(ct);
+        var known = await db.PaymentAttempts.AsNoTracking().SingleOrDefaultAsync(p => p.ProviderOrderId == evidence.OrderId, ct);
+        if (known is null) return Conflict("The provider order is not yet bound. Retry or reconcile this outcome.");
+        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        var order = await PaymentRules.LockOrderAsync(db, known.OrderId, ct);
+        var attempt = await db.PaymentAttempts.SingleAsync(p => p.Id == known.Id, ct);
+        if (order is null || evidence.AmountCents != checked((long)(order.Total * 100m))
+            || attempt.Amount != order.Total || evidence.IntegrationId != attempt.IntegrationId || evidence.Currency != attempt.Currency)
+            return Conflict("The provider evidence does not match the saved order.");
+        var paid = await db.PaymentSettlements.SingleOrDefaultAsync(p => p.OrderId == order.Id, ct);
+        if (paid is not null) return paid.Method == "PaymobSandbox" && paid.ProviderTransactionId == evidence.TransactionId
+            ? null : Conflict("A different receipt already exists for this order.");
+        if (order.Status == OrderStatus.Rejected) return Conflict("Rejected orders cannot be settled.");
+        if (!evidence.Successful || evidence.Pending)
+        {
+            // A failed transaction does not prove that its hosted intention can no longer be paid.
+            attempt.State = evidence.Pending ? "Pending" : "Uncertain"; attempt.IsBlocking = true;
+            attempt.UpdatedAtUtc = DateTime.UtcNow; order.PaymentRevision = checked(order.PaymentRevision + 1);
+            await db.SaveChangesAsync(ct); await tx.CommitAsync(ct); return null;
+        }
+        if (await db.PaymentSettlements.AnyAsync(p => p.ProviderTransactionId == evidence.TransactionId, ct))
+            return Conflict("This provider transaction is already recorded.");
+        db.PaymentSettlements.Add(new() { OrderId = order.Id, Amount = order.Total, Currency = order.Currency,
+            Method = "PaymobSandbox", ProviderTransactionId = evidence.TransactionId });
+        attempt.State = "Succeeded"; attempt.IsBlocking = false; attempt.UpdatedAtUtc = DateTime.UtcNow;
+        attempt.ProtectedClientSecret = null; order.PaymentRevision = checked(order.PaymentRevision + 1);
+        await db.SaveChangesAsync(ct); await tx.CommitAsync(ct); return null;
+    }
+
+    private async Task MarkUncertainAsync(Guid id)
+    {
+        try
+        {
+            await using var db = await factory.CreateDbContextAsync();
+            var known = await db.PaymentAttempts.AsNoTracking().SingleOrDefaultAsync(p => p.Id == id);
+            if (known is null) return;
+            await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+            var order = await PaymentRules.LockOrderAsync(db, known.OrderId, CancellationToken.None);
+            var attempt = await db.PaymentAttempts.SingleAsync(p => p.Id == id);
+            if (order is null || !attempt.IsBlocking) return;
+            attempt.State = "Uncertain"; attempt.UpdatedAtUtc = DateTime.UtcNow; order.PaymentRevision = checked(order.PaymentRevision + 1);
+            await db.SaveChangesAsync(); await tx.CommitAsync();
+        }
+        catch (Exception) { /* The committed Creating state already blocks another payment. */ }
+    }
+
+    private static OperationError Missing() => new(OperationErrorKind.NotFound, "This private payment could not be found.");
+    private static OperationError Conflict(string message) => new(OperationErrorKind.Conflict, message, "payment_reconciliation_required");
+    private static OperationError Unavailable() => new(OperationErrorKind.Conflict, "Online payment is currently unavailable. Please pay at the cafe counter.", "online_unavailable");
+    private static OperationError Uncertain() => new(OperationErrorKind.Unexpected,
+        "The online outcome is uncertain. Keep your private link and reconcile before another payment.", "payment_outcome_uncertain");
+}

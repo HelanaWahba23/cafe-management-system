@@ -1,0 +1,25 @@
+using System.Text.Json;
+using CafeManagement.Api.Application;
+using CafeManagement.Api.Contracts;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace CafeManagement.Api.Controllers;
+
+[ApiController]
+[AllowAnonymous]
+[Route("api/payments/paymob/webhook")]
+[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+public sealed class PaymobWebhookController(PaymobPaymentService payments) : ControllerBase
+{
+    // Provider callbacks carry no cookie authority. HMAC verification is mandatory instead of CSRF.
+    [HttpPost]
+    [Consumes("application/json")]
+    [RequestSizeLimit(131072)]
+    public async Task<IActionResult> Process(JsonElement body, CancellationToken ct)
+    {
+        var signature = Request.Query["hmac"];
+        var error = await payments.WebhookAsync(body, signature.Count == 1 ? signature[0] : null, ct);
+        return error is null ? Ok() : ApiErrors.ToResult(error);
+    }
+}

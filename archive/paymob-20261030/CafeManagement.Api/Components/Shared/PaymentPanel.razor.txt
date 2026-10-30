@@ -1,0 +1,133 @@
+@implements IDisposable
+@using CafeManagement.Api.Application
+@using CafeManagement.Api.Contracts
+@inject PaymentService Payments
+@inject PaymobPaymentService Online
+@inject AuthenticationStateProvider Authentication
+
+<section class="card card-body mt-3" aria-labelledby="payment-heading">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2"><h2 id="payment-heading" class="h4">Payment</h2><button type="button" class="btn btn-outline-secondary btn-sm" disabled="@busy" @onclick="Reload">Refresh payment</button></div>
+    @if (failure is not null) { <p class="alert alert-warning" role="alert">@failure</p> }
+    @if (busy) { <p role="status">Checking payment…</p> }
+    @if (status is not null)
+    {
+        <p class="fw-semibold mb-1" role="status">@Label</p>
+        @if (status.RecordedAtUtc is not null) { <p class="small text-secondary">Recorded @status.RecordedAtUtc.Value.ToString("yyyy-MM-dd HH:mm") UTC</p> }
+        @if (status.State == "PaidSandbox") { <p class="alert alert-info">Paymob sandbox test payment. No real funds were collected.</p> }
+        @if (status.State is "Pending" or "Uncertain") { <p>Payment verification is still needed. Do not record another payment until this outcome is confirmed.</p> }
+        @if (StaffOrderId is not null && status.State == "Unpaid" && CanRecordCash)
+        {
+            <form @onsubmit="NoSubmit" @onsubmit:preventDefault="true" data-order-write="true"><fieldset disabled="@(busy || !interactiveReady)"><legend class="visually-hidden">Record full cash receipt</legend>
+                <div class="form-check mb-3"><input id="cash-confirmation" class="form-check-input" type="checkbox" @bind="cashConfirmed" /><label for="cash-confirmation" class="form-check-label">I received @status.Total @status.Currency in cash for this order.</label></div>
+                <button type="button" class="btn btn-primary" disabled="@(!cashConfirmed)" @onclick="RecordCash">Record cash received</button>
+            </fieldset></form>
+        }
+        @if (StaffOrderId is null && status.State == "Unpaid" && !status.OnlineAvailable) { <p class="text-secondary">Online payment is currently unavailable. Please pay at the cafe counter.</p> }
+        @if (StaffOrderId is null && status.State == "Unpaid" && status.OnlineAvailable)
+        {
+            <form @onsubmit="NoSubmit" @onsubmit:preventDefault="true" data-order-write="true"><p>Paymob sandbox checkout · No real funds.</p><button type="button" class="btn btn-primary" disabled="@(busy || !interactiveReady)" @onclick="StartOnline">Prepare sandbox checkout</button></form>
+        }
+        @if (checkoutUrl is not null && StaffOrderId is null)
+        {
+            <p>Keep this private order tab open while completing the sandbox checkout.</p>
+            <a class="btn btn-primary" href="@checkoutUrl" target="_blank" rel="noopener noreferrer" data-enhance-nav="false">Open sandbox checkout</a>
+        }
+        @if (status.State is "Pending" or "Uncertain")
+        {
+            <form class="mt-3" @onsubmit="NoSubmit" @onsubmit:preventDefault="true" data-order-write="true"><button type="button" class="btn btn-outline-primary" disabled="@(busy || !interactiveReady)" @onclick="Reconcile">Check online outcome</button></form>
+        }
+    }
+</section>
+
+@code {
+    [Parameter] public long? StaffOrderId { get; set; }
+    [Parameter] public string? Capability { get; set; }
+    [Parameter] public bool CanRecordCash { get; set; }
+    [Parameter] public EventCallback OnPaymentChanged { get; set; }
+    private PaymentStatus? status;
+    private string? rowVersion, failure, checkoutUrl;
+    private bool busy, cashConfirmed, disposed, interactiveReady;
+    private int version;
+    private string Label => status?.State switch { "PaidCash" => "Paid · Cash", "PaidSandbox" => "Paid · Sandbox test", "Pending" => "Payment pending", "Uncertain" => "Payment outcome uncertain", _ => "Unpaid" };
+    protected override Task OnParametersSetAsync() => Load();
+    protected override void OnAfterRender(bool firstRender) { if (firstRender) { interactiveReady = true; StateHasChanged(); } }
+    private void NoSubmit() { }
+    private Task Reload() => busy ? Task.CompletedTask : Load();
+    private async Task Load()
+    {
+        var current = ++version; var id = StaffOrderId; var key = Capability; busy = true; failure = null; status = null; cashConfirmed = false; checkoutUrl = null;
+        try
+        {
+            if (id is not null)
+            {
+                var result = await Payments.GetStaffAsync((await Authentication.GetAuthenticationStateAsync()).User, id.Value);
+                if (disposed || version != current) return;
+                failure = result.Error?.Message; status = result.Value?.Payment; rowVersion = result.Value?.RowVersion;
+            }
+            else if (key is not null)
+            {
+                var result = await Payments.GetGuestAsync(key);
+                if (disposed || version != current) return;
+                failure = result.Error?.Message; status = result.Value;
+            }
+        }
+        finally { if (!disposed && version == current) busy = false; }
+    }
+    private async Task RecordCash()
+    {
+        if (busy || !cashConfirmed || StaffOrderId is null || rowVersion is null) return;
+        var id = StaffOrderId.Value; var current = version; busy = true; failure = null;
+        try
+        {
+            var result = await Payments.RecordCashAsync((await Authentication.GetAuthenticationStateAsync()).User, id, new() { RowVersion = rowVersion });
+            if (disposed || current != version) return;
+            failure = result.Error?.Message; cashConfirmed = false;
+            if (result.Value is not null) { status = result.Value.Payment; rowVersion = result.Value.RowVersion; await OnPaymentChanged.InvokeAsync(); }
+        }
+        finally { if (!disposed && current == version) busy = false; }
+    }
+    private async Task StartOnline()
+    {
+        if (busy || Capability is null || StaffOrderId is not null || status?.State != "Unpaid" || !status.OnlineAvailable) return;
+        var key = Capability; var current = version; busy = true; failure = null;
+        try
+        {
+            var result = await Online.StartAsync(key);
+            if (disposed || current != version) return;
+            failure = result.Error?.Message; checkoutUrl = result.CheckoutUrl;
+            if (result.Status is not null) status = result.Status;
+            else if (result.Error is not null)
+            {
+                // An interrupted POST may already have saved a blocking attempt.
+                var refreshed = await Payments.GetGuestAsync(key);
+                if (disposed || current != version) return;
+                status = refreshed.Value;
+            }
+        }
+        finally { if (!disposed && current == version) busy = false; }
+    }
+    private async Task Reconcile()
+    {
+        if (busy) return; var current = version; var id = StaffOrderId; var key = Capability; busy = true; failure = null;
+        try
+        {
+            if (id is not null)
+            {
+                var error = await Online.ReconcileStaffAsync((await Authentication.GetAuthenticationStateAsync()).User, id.Value);
+                if (disposed || current != version) return;
+                failure = error?.Message;
+                if (error is null) await OnPaymentChanged.InvokeAsync();
+            }
+            else if (key is not null)
+            {
+                var result = await Online.ReconcileGuestAsync(key);
+                if (disposed || current != version) return;
+                failure = result.Error?.Message;
+                if (result.Status is not null) status = result.Status;
+                if (status?.State is "PaidCash" or "PaidSandbox") checkoutUrl = null;
+            }
+        }
+        finally { if (!disposed && current == version) busy = false; }
+    }
+    public void Dispose() { disposed = true; ++version; }
+}

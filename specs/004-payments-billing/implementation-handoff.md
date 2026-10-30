@@ -19,3 +19,15 @@ Cash milestone0b9038c pushed to origin/master.10/16 tasks accepted in working tr
 ## Superseding final checkpoint
 
 Customer navigation is accepted and pushed as18d6a67; Feature00261/63. Feature00512/12 is pushed. Original database now has the reviewed additive migrations with verified backup and prior-record preservation. The provider source/online hunks listed above remain uncommitted and unverified; real test credentials plus approved public HTTPS callback are the blocker for T009–T014. See ../../IMPLEMENTATION-HANDOFF.md for current hosts, exact remaining acceptance and safe resume. Do not replay historical cleanup/migration commands or repeat the resolved native-dialog request.
+
+## Current cash-only scope —2026-10-30
+
+User approved removing Paymob through Spec Kit. All ten original affected source files and pre-change Feature004 design/tasks are preserved under archive/paymob-20261030; SHA-256 hashes verified. Archive text is excluded from compilation and marked -text to preserve exact bytes across Git checkout. No credentials, database records, Identity accounts, QR identifiers, constraints or migrations were changed.
+
+Compiled Paymob client/service/options/webhook/return and online actions/registrations were removed after archiving. Previously accepted cash controller/panel baseline was restored; PaymentService no longer accepts provider options and always projects OnlineAvailable=false. Cash instructions replace unavailable-provider copy. Historical sandbox/rejection/uncertain guards remain to protect existing data. No old secret setting can turn online payments back on.
+
+Spec Kit requirements, constitution1.1.0, Feature004 spec/plan/research/data model/contracts/quickstart/tasks and current setup were aligned. T009–T013 are explicitly REMOVED FROM SCOPE, not passed. T014 cash-only bill acceptance combines prior26 cash/security checks and320/768/1280/keyboard evidence with the unchanged cash controller/panel behavior, scoped dependency review and fresh route/build checks. The prior interactive Paymob UI is no longer in scope.
+
+Debug/Release builds passed zero warnings/errors. Release publish passed to inactive artifacts/cash-scope-20261030-publish. Twelve read-only HTTPS checks on7277 passed: existing pickup/QR/login; missing customer capability denied; staff payment/cash/report access denied anonymously; removed initiation, both reconciliation routes, webhook and return all404. This ran against the existing validation copy with legacy Paymob Enabled=true deliberately set only for that process, proving configuration cannot restore removed routes. No payment/order/catalog writes, migration or cleanup ran. The temporary host was stopped only after verifying PID/DLL/port; all prior hosts remain untouched.
+
+Active original tasks164:160 completed,4 pending;5 original provider tasks removed. Feature00411/11 active; Feature00154/56, Feature00261/63, Feature00322/22, Feature00512/12. Real Android acceptance was not performed or waived. No provider account/credentials are required for current delivery. Earlier handoff/provider setup below is historical and superseded by this section.

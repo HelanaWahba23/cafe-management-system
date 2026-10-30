@@ -1,0 +1,9 @@
+@page "/payments/return"
+@attribute [AllowAnonymous]
+@layout PublicLayout
+<PageTitle>Payment verification | Cafe</PageTitle>
+<h1>Check your payment status</h1>
+<p>This page does not confirm that a payment succeeded.</p>
+<p>Return to your original private order tab and choose <strong>Check online outcome</strong> to verify the result. Keep your private order link.</p>
+<p class="text-secondary">This portfolio uses Paymob sandbox test checkout. No live transactions are supported.</p>
+<a class="btn btn-outline-primary" href="/menu/pickup">Cafe menu</a>

@@ -5,7 +5,7 @@
 - Support dine-in ordering using a unique QR code for each table.
 - Support online pickup ordering directly through the cafe website, without requiring a QR code.
 - Both dine-in and online pickup orders must appear in the same Cashier/POS system.
-- Customers can pay online or pay at the cashier/pickup counter.
+- Customers pay cash at the cashier/pickup counter. Online ordering remains supported; online payment is outside the current delivery scope.
 
 ### Cashier/POS
 
@@ -34,13 +34,14 @@
 ## Out of scope
 
 - Delivery.
+- Online payment, Paymob registration/credentials, hosted checkout and provider callbacks (removed by user approval on2026-10-30).
 
 ## Project constraint
 
 - Keep the implementation simple and realistic for a three-day portfolio project.
 - Keep the confirmed scope achievable within three days of AI-assisted development; do not add unrelated features or expand basic sales reporting beyond basic order and sales statistics.
 
-## Confirmed implementation decisions — 2026-10-29
+## Historical implementation decisions — 2026-10-29 (online payment superseded)
 
 - Complete Features001–005 in dependency order using Spec Kit and preserve ASP.NET Core, Blazor, Bootstrap, EF Core, SQL Server and Identity.
 - Counter orders: dine-in with existing table, or takeaway without table; name/phone optional. Online customer name/phone remain required.
@@ -48,3 +49,7 @@
 - Counter cash recording and rejection are blocked while an online attempt is pending or uncertain; paid orders cannot be rejected. Reconcile first; refunds are outside this scope.
 - Continue independent cash/billing/reporting work when Paymob credentials or sandbox access are unavailable; leave actual provider acceptance pending.
 - Polish consistent responsive customer/POS/Admin UI; basic order/sales reports only. No delivery.
+
+## Approved scope revision —2026-10-30
+
+The user approved removing Paymob through Spec Kit because account setup is unavailable. Current payment scope is cash only. Provider source and prior planning are archived recoverably; no credentials, data, accounts, QR identifiers or migrations are deleted. Original T009–T013 are cancelled/out of scope, not passed. T014 retains cash-only billing acceptance. The four real-phone/final-acceptance tasks in Features001/002 remain pending; they were not waived by this payment scope change.

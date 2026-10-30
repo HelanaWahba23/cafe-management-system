@@ -96,7 +96,7 @@ The confirmed product scope in `requirements.md` is:
 - Admin creation, editing, and management of menu categories, products, prices, and availability.
 - Admin management of cafe tables and generation of a unique QR code for each table.
 - Customers viewing their order status, with cashiers able to update it.
-- Online payment or payment at the cashier/pickup counter.
+- Cash payment at the cashier/pickup counter; online payment is excluded from current delivery by the user's2026-10-30 scope revision.
 - Cashiers recording payments made at the counter.
 - Admin viewing basic order and sales statistics.
 - No delivery and a simple, realistic three-day portfolio scope.
@@ -133,4 +133,8 @@ affected downstream artifacts after an amendment, without changing them outside 
 authorized scope. Every change review MUST identify any applicable constitutional deviation
 and obtain explicit approval before proceeding with it.
 
-**Version**: 1.0.1 | **Ratified**: 2026-10-25 | **Last Amended**: 2026-10-27
+## Approved amendment —2026-10-30
+
+User explicitly approved removing Paymob/online payment using Spec Kit. Cash billing, online ordering and all existing records remain supported; provider source is archived. This narrows the confirmed product scope without weakening authorization, consistency, preservation or honest acceptance rules. Physical-device acceptance remains unperformed. Requirements and Feature004 artifacts must reflect this revision.
+
+**Version**: 1.1.0 | **Ratified**: 2026-10-25 | **Last Amended**: 2026-10-30

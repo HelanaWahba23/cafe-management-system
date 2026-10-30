@@ -1,0 +1,167 @@
+diff --git a/CafeManagement.Api/Components/Shared/PaymentPanel.razor b/CafeManagement.Api/Components/Shared/PaymentPanel.razor
+index 8e85730..d363836 100644
+--- a/CafeManagement.Api/Components/Shared/PaymentPanel.razor
++++ b/CafeManagement.Api/Components/Shared/PaymentPanel.razor
+@@ -2,6 +2,7 @@
+ @using CafeManagement.Api.Application
+ @using CafeManagement.Api.Contracts
+ @inject PaymentService Payments
++@inject PaymobPaymentService Online
+ @inject AuthenticationStateProvider Authentication
+ 
+ <section class="card card-body mt-3" aria-labelledby="payment-heading">
+@@ -22,7 +23,19 @@
+             </fieldset></form>
+         }
+         @if (StaffOrderId is null && status.State == "Unpaid" && !status.OnlineAvailable) { <p class="text-secondary">Online payment is currently unavailable. Please pay at the cafe counter.</p> }
+-
++        @if (StaffOrderId is null && status.State == "Unpaid" && status.OnlineAvailable)
++        {
++            <form @onsubmit="NoSubmit" @onsubmit:preventDefault="true" data-order-write="true"><p>Paymob sandbox checkout · No real funds.</p><button type="button" class="btn btn-primary" disabled="@(busy || !interactiveReady)" @onclick="StartOnline">Prepare sandbox checkout</button></form>
++        }
++        @if (checkoutUrl is not null && StaffOrderId is null)
++        {
++            <p>Keep this private order tab open while completing the sandbox checkout.</p>
++            <a class="btn btn-primary" href="@checkoutUrl" target="_blank" rel="noopener noreferrer" data-enhance-nav="false">Open sandbox checkout</a>
++        }
++        @if (status.State is "Pending" or "Uncertain")
++        {
++            <form class="mt-3" @onsubmit="NoSubmit" @onsubmit:preventDefault="true" data-order-write="true"><button type="button" class="btn btn-outline-primary" disabled="@(busy || !interactiveReady)" @onclick="Reconcile">Check online outcome</button></form>
++        }
+     }
+ </section>
+ 
+@@ -32,7 +45,7 @@
+     [Parameter] public bool CanRecordCash { get; set; }
+     [Parameter] public EventCallback OnPaymentChanged { get; set; }
+     private PaymentStatus? status;
+-    private string? rowVersion, failure;
++    private string? rowVersion, failure, checkoutUrl;
+     private bool busy, cashConfirmed, disposed, interactiveReady;
+     private int version;
+     private string Label => status?.State switch { "PaidCash" => "Paid · Cash", "PaidSandbox" => "Paid · Sandbox test", "Pending" => "Payment pending", "Uncertain" => "Payment outcome uncertain", _ => "Unpaid" };
+@@ -42,7 +55,7 @@
+     private Task Reload() => busy ? Task.CompletedTask : Load();
+     private async Task Load()
+     {
+-        var current = ++version; var id = StaffOrderId; var key = Capability; busy = true; failure = null; status = null; cashConfirmed = false;
++        var current = ++version; var id = StaffOrderId; var key = Capability; busy = true; failure = null; status = null; cashConfirmed = false; checkoutUrl = null;
+         try
+         {
+             if (id is not null)
+@@ -73,5 +86,48 @@
+         }
+         finally { if (!disposed && current == version) busy = false; }
+     }
++    private async Task StartOnline()
++    {
++        if (busy || Capability is null || StaffOrderId is not null || status?.State != "Unpaid" || !status.OnlineAvailable) return;
++        var key = Capability; var current = version; busy = true; failure = null;
++        try
++        {
++            var result = await Online.StartAsync(key);
++            if (disposed || current != version) return;
++            failure = result.Error?.Message; checkoutUrl = result.CheckoutUrl;
++            if (result.Status is not null) status = result.Status;
++            else if (result.Error is not null)
++            {
++                // An interrupted POST may already have saved a blocking attempt.
++                var refreshed = await Payments.GetGuestAsync(key);
++                if (disposed || current != version) return;
++                status = refreshed.Value;
++            }
++        }
++        finally { if (!disposed && current == version) busy = false; }
++    }
++    private async Task Reconcile()
++    {
++        if (busy) return; var current = version; var id = StaffOrderId; var key = Capability; busy = true; failure = null;
++        try
++        {
++            if (id is not null)
++            {
++                var error = await Online.ReconcileStaffAsync((await Authentication.GetAuthenticationStateAsync()).User, id.Value);
++                if (disposed || current != version) return;
++                failure = error?.Message;
++                if (error is null) await OnPaymentChanged.InvokeAsync();
++            }
++            else if (key is not null)
++            {
++                var result = await Online.ReconcileGuestAsync(key);
++                if (disposed || current != version) return;
++                failure = result.Error?.Message;
++                if (result.Status is not null) status = result.Status;
++                if (status?.State is "PaidCash" or "PaidSandbox") checkoutUrl = null;
++            }
++        }
++        finally { if (!disposed && current == version) busy = false; }
++    }
+     public void Dispose() { disposed = true; ++version; }
+ }
+diff --git a/CafeManagement.Api/Controllers/PaymentsController.cs b/CafeManagement.Api/Controllers/PaymentsController.cs
+index ba7d896..b7a7b1d 100644
+--- a/CafeManagement.Api/Controllers/PaymentsController.cs
++++ b/CafeManagement.Api/Controllers/PaymentsController.cs
+@@ -8,8 +8,42 @@ namespace CafeManagement.Api.Controllers;
+ 
+ [ApiController]
+ [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+-public sealed class PaymentsController(PaymentService payments) : ControllerBase
++public sealed class PaymentsController(PaymentService payments, PaymobPaymentService online) : ControllerBase
+ {
++    [AllowAnonymous]
++    [EnableRateLimiting("GuestOrders")]
++    [HttpPost("api/orders/payment/start")]
++    [Consumes("application/json")]
++    [ValidateAntiForgeryToken]
++    public async Task<IActionResult> Start(PaymentActionInput input, CancellationToken ct)
++    {
++        var result = await online.StartAsync(Capability(), ct);
++        return result.Error is null ? Ok(new { result.Status, result.CheckoutUrl }) : ApiErrors.ToResult(result.Error);
++    }
++
++    [AllowAnonymous]
++    [EnableRateLimiting("GuestOrders")]
++    [HttpPost("api/orders/payment/reconcile")]
++    [Consumes("application/json")]
++    [ValidateAntiForgeryToken]
++    public async Task<IActionResult> Reconcile(PaymentActionInput input, CancellationToken ct)
++    {
++        var result = await online.ReconcileGuestAsync(Capability(), ct);
++        return result.Error is null ? Ok(result.Status) : ApiErrors.ToResult(result.Error);
++    }
++
++    [Authorize(Policy = "Cashier")]
++    [HttpPost("api/pos/orders/{id:long}/payment/reconcile")]
++    [Consumes("application/json")]
++    [ValidateAntiForgeryToken]
++    public async Task<IActionResult> ReconcileStaff(long id, PaymentActionInput input, CancellationToken ct)
++    {
++        var error = await online.ReconcileStaffAsync(User, id, ct);
++        if (error is not null) return ApiErrors.ToResult(error);
++        var result = await payments.GetStaffAsync(User, id, ct);
++        return result.Error is null ? Ok(result.Value) : ApiErrors.ToResult(result.Error);
++    }
++
+     [Authorize(Policy = "Cashier")]
+     [HttpGet("api/pos/orders/{id:long}/payment")]
+     public async Task<IActionResult> StaffStatus(long id, CancellationToken ct)
+diff --git a/CafeManagement.Api/Program.cs b/CafeManagement.Api/Program.cs
+index defcdd5..8968a56 100644
+--- a/CafeManagement.Api/Program.cs
++++ b/CafeManagement.Api/Program.cs
+@@ -70,6 +70,14 @@ builder.Services.AddScoped<OrderService>();
+ builder.Services.AddScoped<PosOrderService>();
+ builder.Services.AddScoped<PaymentService>();
+ builder.Services.AddScoped<AdminReportService>();
++builder.Services.AddScoped<PaymobPaymentService>();
++builder.Services.AddScoped<PaymobClient>();
++builder.Services.AddHttpClient("Paymob", client =>
++{
++    client.BaseAddress = new Uri("https://accept.paymob.com/");
++    client.Timeout = TimeSpan.FromSeconds(15);
++    client.MaxResponseContentBufferSize = 1024 * 1024;
++}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+ builder.Services.Configure<PaymobOptions>(builder.Configuration.GetSection("Paymob"));
+ builder.Services.AddScoped<CartState>();
+ builder.Services.AddOptions<PublicMenuOptions>()

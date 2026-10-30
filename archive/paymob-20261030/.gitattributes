@@ -1,0 +1,3 @@
+# Preserve original archive bytes and recognize their existing CRLF endings.
+* -text whitespace=-blank-at-eof,cr-at-eol
+uncommitted-before.patch -diff

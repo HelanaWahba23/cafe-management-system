@@ -1,0 +1,129 @@
+using System.Globalization;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using CafeManagement.Api.Domain;
+using Microsoft.Extensions.Options;
+
+namespace CafeManagement.Api.Application;
+
+public sealed record PaymobIntention(string Id, long OrderId, string ClientSecret);
+public sealed record PaymobEvidence(long TransactionId, long OrderId, long AmountCents, string Currency,
+    int IntegrationId, bool Successful, bool Pending, bool IsLive);
+
+public sealed class PaymobClient(IHttpClientFactory clients, IOptions<PaymobOptions> options)
+{
+    public async Task<PaymobIntention> CreateAsync(PaymentAttempt attempt, Order order, CancellationToken ct)
+    {
+        var config = options.Value;
+        if (!config.IsReady) throw new InvalidOperationException("Sandbox payment is unavailable.");
+        var client = clients.CreateClient("Paymob");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "v1/intention/");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Token", config.SecretKey);
+        request.Content = JsonContent.Create(new
+        {
+            amount = checked((long)(attempt.Amount * 100m)), currency = "EGP",
+            payment_methods = new[] { attempt.IntegrationId },
+            billing_data = new { first_name = order.CustomerName, phone_number = order.CustomerPhone },
+            special_reference = attempt.Id.ToString("N"), expiration = 3600,
+            notification_url = config.CallbackBaseUrl.TrimEnd('/') + "/api/payments/paymob/webhook",
+            redirection_url = config.CallbackBaseUrl.TrimEnd('/') + "/payments/return"
+        });
+        using var response = await client.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+        using var document = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(ct));
+        var root = document.RootElement;
+        var methods = root.GetProperty("payment_methods");
+        if (methods.ValueKind != JsonValueKind.Array || methods.GetArrayLength() == 0
+            || methods.EnumerateArray().Any(m => m.GetProperty("live").GetBoolean()))
+            throw new InvalidOperationException("Expected sandbox methods.");
+        var id = root.GetProperty("id").GetString();
+        var orderId = root.GetProperty("intention_order_id").GetInt64();
+        var secret = root.GetProperty("client_secret").GetString();
+        if (string.IsNullOrWhiteSpace(id) || id.Length > 120 || orderId <= 0
+            || string.IsNullOrWhiteSpace(secret) || secret.Length > 2000)
+            throw new InvalidOperationException("Invalid sandbox response.");
+        return new(id, orderId, secret);
+    }
+
+    public async Task<JsonElement?> InquireAsync(PaymentAttempt attempt, CancellationToken ct)
+    {
+        var config = options.Value;
+        if (!config.IsReady) throw new InvalidOperationException("Sandbox payment is unavailable.");
+        var client = clients.CreateClient("Paymob");
+        using var authentication = await client.PostAsJsonAsync("api/auth/tokens", new { api_key = config.ApiKey }, ct);
+        authentication.EnsureSuccessStatusCode();
+        using var auth = JsonDocument.Parse(await authentication.Content.ReadAsByteArrayAsync(ct));
+        var token = auth.RootElement.GetProperty("token").GetString();
+        if (string.IsNullOrWhiteSpace(token)) throw new InvalidOperationException("Unable to authenticate inquiry.");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "api/ecommerce/orders/transaction_inquiry");
+        request.Content = attempt.ProviderOrderId is { } orderId
+            ? JsonContent.Create(new { auth_token = token, order_id = orderId.ToString(CultureInfo.InvariantCulture) })
+            : JsonContent.Create(new { auth_token = token, merchant_order_id = attempt.Id.ToString("N") });
+        using var response = await client.SendAsync(request, ct);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
+        response.EnsureSuccessStatusCode();
+        using var document = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(ct));
+        return document.RootElement.Clone();
+    }
+
+    public static bool VerifyHmac(JsonElement body, string? signature, string secret, out PaymobEvidence? evidence)
+    {
+        evidence = null;
+        try
+        {
+            if (signature?.Length != 128 || string.IsNullOrEmpty(secret)
+                || body.GetProperty("type").GetString() != "TRANSACTION") return false;
+            var transaction = body.GetProperty("obj");
+            var paths = new[] { "amount_cents", "created_at", "currency", "error_occured", "has_parent_transaction", "id",
+                "integration_id", "is_3d_secure", "is_auth", "is_capture", "is_refunded", "is_standalone_payment",
+                "is_voided", "order.id", "owner", "pending", "source_data.pan", "source_data.sub_type", "source_data.type", "success" };
+            var payload = new StringBuilder();
+            foreach (var path in paths)
+            {
+                var value = transaction;
+                foreach (var segment in path.Split('.')) value = value.GetProperty(segment);
+                payload.Append(value.ValueKind switch
+                {
+                    JsonValueKind.String => value.GetString() ?? throw new FormatException(),
+                    JsonValueKind.True => "true", JsonValueKind.False => "false",
+                    JsonValueKind.Number => value.GetInt64().ToString(CultureInfo.InvariantCulture),
+                    _ => throw new FormatException()
+                });
+            }
+            var actual = HMACSHA512.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(payload.ToString()));
+            var supplied = Convert.FromHexString(signature);
+            if (!CryptographicOperations.FixedTimeEquals(actual, supplied)) return false;
+            return TryReadEvidence(transaction, out evidence);
+        }
+        catch (Exception ex) when (ex is KeyNotFoundException or InvalidOperationException or FormatException or OverflowException)
+        { return false; }
+    }
+
+    internal static bool TryReadEvidence(JsonElement transaction, out PaymobEvidence? evidence)
+    {
+        evidence = null;
+        try
+        {
+            var id = transaction.GetProperty("id").GetInt64();
+            var order = transaction.GetProperty("order").GetProperty("id").GetInt64();
+            var amount = transaction.GetProperty("amount_cents").GetInt64();
+            var integration = transaction.GetProperty("integration_id").GetInt32();
+            var currency = transaction.GetProperty("currency").GetString();
+            if (id <= 0 || order <= 0 || amount <= 0 || integration <= 0 || currency != "EGP") return false;
+            var pending = transaction.GetProperty("pending").GetBoolean();
+            var success = transaction.GetProperty("success").GetBoolean()
+                && !transaction.GetProperty("error_occured").GetBoolean()
+                && !transaction.GetProperty("is_auth").GetBoolean()
+                && !transaction.GetProperty("is_refunded").GetBoolean()
+                && !transaction.GetProperty("is_voided").GetBoolean()
+                && (transaction.GetProperty("is_capture").GetBoolean() || transaction.GetProperty("is_standalone_payment").GetBoolean());
+            evidence = new(id, order, amount, currency, integration, success, pending, transaction.GetProperty("is_live").GetBoolean());
+            return true;
+        }
+        catch (Exception ex) when (ex is KeyNotFoundException or InvalidOperationException or FormatException or OverflowException)
+        { return false; }
+    }
+}

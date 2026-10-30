@@ -1,3 +1,7 @@
+# Current scope disposition —2026-10-30
+
+Cash-only delivery approved by the user. T009–T013 are removed, never passed; T014 is limited to cash billing plus safe runtime removal. Historical checkpoint notes below are superseded by this scope decision. Existing task IDs are preserved; original task descriptions/artifacts are archived. Active payment tasks11; historical provider tasks removed5. Physical-phone acceptance in Features001/002 remains pending.
+
 # Tasks: Payments & Billing
 
 **Input**:spec.md/plan.md/research.md/data-model.md/contracts/quickstart.md. Manual targeted diagnostics; no default automated test suite.
@@ -21,21 +25,21 @@ Independent acceptance:full saved amount once, actor/time, stale/duplicate/acces
 - [x] T007 [US1] Add explicit cash confirmation/status to Components/Pages/Pos/OrderDetail.razor, busy/reconnect and stale reload behavior (afterT006; FR-008/009).
 - [x] T008 [US1] Validate cash once/repeat/concurrent, actor/amount, unauthorized/CSRF, rejected/paid/pending blocks and unchanged fulfillment edges; record specs/004-payments-billing/validation.md (afterT007; SC-001/004).
 
-## Phase4 US2 Online sandbox
+## Phase4 US2 Online sandbox — removed from scope
 
-Independent acceptance:actual hosted sandbox success/failure, verified callback/inquiry and no duplicate effects. Missing keys/reachable origin leaves actual provider checks pending; continue US3/Feature005.
+Historical provider acceptance is cancelled by the approved cash-only scope; none of these tasks is counted as passed.
 
-- [ ] T009 [US2] Implement fail-closed sandbox config and official HTTP/HMAC protocol in Application/PaymobOptions.cs and PaymobClient.cs; built-in HttpClient/DataProtection only, no secrets/logged card data (afterT004; FR-003/004/005/010).
-- [ ] T010 [US2] Implement stable blocking attempt initiation/recovery/shared verified settlement in Application/PaymobPaymentService.cs; exact signed ID/amount/EGP/test integration, no blind uncertain POST replay or regression (afterT009; FR-003–007).
-- [ ] T011 [US2] Add capability-scoped start/status/reconcile and strictly verified provider callback in Controllers/PaymentsController.cs, PaymobWebhookController.cs and generic Components/Pages/Payments/Return.razor; no redirect settlement (afterT010; FR-001/003–006).
-- [ ] T012 [US2] Add customer private sandbox checkout/status actions in Components/Shared/PaymentPanel.razor and Pages/Orders/TrackOrder.razor; explicit initiation, no-key unavailable and test labels (afterT011; FR-008/009/010).
-- [ ] T013 [US2] Validate cryptographic/input/authorization/duplicate/mismatch handling separately from actual Paymob sandbox success/failure/inquiry/webhook; keep actual unperformed provider checks pending in specs/004-payments-billing/validation.md (afterT012; SC-002/003/004).
+- ~~T009 [US2] Implement fail-closed sandbox config and official HTTP/HMAC protocol in Application/PaymobOptions.cs and PaymobClient.cs; built-in HttpClient/DataProtection only, no secrets/logged card data (afterT004; FR-003/004/005/010).~~ **REMOVED FROM SCOPE 2026-10-30, not passed.** Original requirement retained in archive/paymob-20261030/feature004-before-scope-change/tasks.md.
+- ~~T010 [US2] Implement stable blocking attempt initiation/recovery/shared verified settlement in Application/PaymobPaymentService.cs; exact signed ID/amount/EGP/test integration, no blind uncertain POST replay or regression (afterT009; FR-003–007).~~ **REMOVED FROM SCOPE 2026-10-30, not passed.** Original requirement retained in archive/paymob-20261030/feature004-before-scope-change/tasks.md.
+- ~~T011 [US2] Add capability-scoped start/status/reconcile and strictly verified provider callback in Controllers/PaymentsController.cs, PaymobWebhookController.cs and generic Components/Pages/Payments/Return.razor; no redirect settlement (afterT010; FR-001/003–006).~~ **REMOVED FROM SCOPE 2026-10-30, not passed.** Original requirement retained in archive/paymob-20261030/feature004-before-scope-change/tasks.md.
+- ~~T012 [US2] Add customer private sandbox checkout/status actions in Components/Shared/PaymentPanel.razor and Pages/Orders/TrackOrder.razor; explicit initiation, no-key unavailable and test labels (afterT011; FR-008/009/010).~~ **REMOVED FROM SCOPE 2026-10-30, not passed.** Original requirement retained in archive/paymob-20261030/feature004-before-scope-change/tasks.md.
+- ~~T013 [US2] Validate cryptographic/input/authorization/duplicate/mismatch handling separately from actual Paymob sandbox success/failure/inquiry/webhook; keep actual unperformed provider checks pending in specs/004-payments-billing/validation.md (afterT012; SC-002/003/004).~~ **REMOVED FROM SCOPE 2026-10-30, not passed.** Original requirement retained in archive/paymob-20261030/feature004-before-scope-change/tasks.md.
 
 ## Phase5 US3 Billing and integration
 
 Independent acceptance:historical itemization unchanged, truthful method/state/time and explicit sandbox separation.
 
-- [ ] T014 [US3] Integrate payment projections with customer and staff bill views in Components/Shared/PaymentPanel.razor, Pages/Pos/OrderDetail.razor and Pages/Orders/TrackOrder.razor; verify historical prices, privacy, sandbox classification and320/768/desktop keyboard UI in specs/004-payments-billing/validation.md (afterT008; provider controls afterT012; FR-008/009, SC-004/005).
+- [x] T014 [US3] Verify cash-only historical customer/staff bills, privacy, method/time, responsive keyboard UI and online route/control removal; preserve archived provider source and database history. Reuse accepted cash evidence and record scoped validation in specs/004-payments-billing/validation.md (FR-001–010, SC-001–005).
 - [x] T015 Run restore/build/Release publish, security/diff and full preservation checks; update specs/004-payments-billing/quickstart.md and implementation-handoff.md with exact external setup/manual blockers (after independent implemented batches; FR-009/010, SC-005).
 - [x] T016 Commit/push only validated payment batches, preserving unfinished provider/native UI and original Feature002 files; record milestone in specs/004-payments-billing/implementation-handoff.md and continue Feature005 despite T013 external blockers (FR-009/010).
 

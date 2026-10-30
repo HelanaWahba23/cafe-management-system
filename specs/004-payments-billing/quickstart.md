@@ -1,9 +1,9 @@
-# Quickstart: Payments & Billing
+# Quickstart: Cash Payments & Billing
 
-1. Preserve current Git files/DB row/account/QR baseline. Generate/review additive payment migration; apply only owned validation copy first.
-2. Build Debug/Release and publish using existing artifacts paths. Verify current Cashier-only cash JSON/CSRF routes and capability-only customer payment status.
-3. On owned orders verify full cash once, repeat, stale/concurrent/refused role/rejected cases, recorded actor/time, exact EGP, immutable bill and paid-order rejection refusal. Remove only recorded diagnostic rows in child→parent order; compare fingerprints.
-4. Without Paymob configuration verify explicit unavailable, no fake checkout/success, cash still works where no active attempt. Test local HMAC handling only as cryptographic/input validation, not provider acceptance.
-5. Operator setup:configure Paymob Egypt test secrets and known test card integration in local UserSecrets, plus approved publicly reachable trusted HTTPS callback base. Do not paste secrets into chat, commit them, create a tunnel or weaken certificate checks. Actual endpoint /api/payments/paymob/webhook and generic return page /payments/return.
-6. With real sandbox setup verify hosted success/failure/cancel, exact evidence match, duplicate/reordered webhook, uncertain initiation/inquiry and cash/rejection locking. No live transactions. Keep this step pending without actual provider evidence.
-7. Check bill/status/actions at320/768/desktop and keyboard, error/disconnect states, no sensitive logs/public projections. Record builds/security/preservation and exact blocked acceptance. Push only validated batches; continue Feature005 independent of provider setup.
+1. No Paymob account, test keys or callback is required. Preserve existing User Secrets and database; no migration is needed for online-payment removal.
+2. Build Debug/Release and publish to a fresh inactive folder. Start an isolated HTTPS host with approved existing validation copy configuration; do not change current live hosts or expose publicly.
+3. Confirm cash/status routes still require staff authority or private customer capability and cash POST still requires JSON/CSRF. Confirm removed online routes404 with their original HTTP methods, including POST webhook and GET return.
+4. Customer bill must say pay cash at counter/on pickup and contain no checkout/reconciliation controls. OnlineAvailable must be false even when old Enabled/key settings exist. Never display a fake online paid result.
+5. Reuse prior exact-amount/actor/time/duplicate/concurrency/rejection/history/responsive cash acceptance. Repeat changed dependency/panel routes and build validation; never replay old fixture cleanup scripts.
+6. Verify archive manifest hashes and review scoped source/docs/secrets before push. Preserve all database migrations, records, accounts, QR identifiers and historical sandbox classification.
+7. Physical Android QR/rescan/pickup/private tracking and final Features001/002 acceptance remain separate, unperformed checks in EXTERNAL-ACCEPTANCE.md.

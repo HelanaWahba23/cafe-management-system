@@ -1,0 +1,80 @@
+using CafeManagement.Api.Application;
+using CafeManagement.Api.Contracts;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+
+namespace CafeManagement.Api.Controllers;
+
+[ApiController]
+[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+public sealed class PaymentsController(PaymentService payments, PaymobPaymentService online) : ControllerBase
+{
+    [AllowAnonymous]
+    [EnableRateLimiting("GuestOrders")]
+    [HttpPost("api/orders/payment/start")]
+    [Consumes("application/json")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Start(PaymentActionInput input, CancellationToken ct)
+    {
+        var result = await online.StartAsync(Capability(), ct);
+        return result.Error is null ? Ok(new { result.Status, result.CheckoutUrl }) : ApiErrors.ToResult(result.Error);
+    }
+
+    [AllowAnonymous]
+    [EnableRateLimiting("GuestOrders")]
+    [HttpPost("api/orders/payment/reconcile")]
+    [Consumes("application/json")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Reconcile(PaymentActionInput input, CancellationToken ct)
+    {
+        var result = await online.ReconcileGuestAsync(Capability(), ct);
+        return result.Error is null ? Ok(result.Status) : ApiErrors.ToResult(result.Error);
+    }
+
+    [Authorize(Policy = "Cashier")]
+    [HttpPost("api/pos/orders/{id:long}/payment/reconcile")]
+    [Consumes("application/json")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ReconcileStaff(long id, PaymentActionInput input, CancellationToken ct)
+    {
+        var error = await online.ReconcileStaffAsync(User, id, ct);
+        if (error is not null) return ApiErrors.ToResult(error);
+        var result = await payments.GetStaffAsync(User, id, ct);
+        return result.Error is null ? Ok(result.Value) : ApiErrors.ToResult(result.Error);
+    }
+
+    [Authorize(Policy = "Cashier")]
+    [HttpGet("api/pos/orders/{id:long}/payment")]
+    public async Task<IActionResult> StaffStatus(long id, CancellationToken ct)
+    {
+        var result = await payments.GetStaffAsync(User, id, ct);
+        return result.Error is null ? Ok(result.Value) : ApiErrors.ToResult(result.Error);
+    }
+
+    [Authorize(Policy = "Cashier")]
+    [HttpPost("api/pos/orders/{id:long}/cash")]
+    [Consumes("application/json")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Cash(long id, CashPaymentInput input, CancellationToken ct)
+    {
+        var result = await payments.RecordCashAsync(User, id, input, ct);
+        return result.Error is null ? Ok(result.Value) : ApiErrors.ToResult(result.Error);
+    }
+
+    [AllowAnonymous]
+    [EnableRateLimiting("GuestOrders")]
+    [HttpGet("api/orders/payment")]
+    public async Task<IActionResult> GuestStatus(CancellationToken ct)
+    {
+        var result = await payments.GetGuestAsync(Capability(), ct);
+        return result.Error is null ? Ok(result.Value) : ApiErrors.ToResult(result.Error);
+    }
+
+    private string? Capability()
+    {
+        var authorization = Request.Headers.Authorization;
+        return authorization.Count == 1 && System.Net.Http.Headers.AuthenticationHeaderValue.TryParse(authorization[0], out var header)
+            && header.Scheme.Equals("Bearer", StringComparison.OrdinalIgnoreCase) ? header.Parameter : null;
+    }
+}

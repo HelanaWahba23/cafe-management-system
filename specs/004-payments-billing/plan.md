@@ -1,43 +1,24 @@
-# Implementation Plan: Payments & Billing
+# Implementation Plan: Cash Payments & Billing
 
-**Branch**:`master` | **Date**:2026-10-29 | **Spec**:[spec.md](spec.md)
+**Updated**:2026-10-30. User-authorized in-place scope revision; no feature restart.
 
-## Summary
+## Technical context
 
-Add separate payment attempts and one-per-order settlements to the existing EF/SQL architecture. Implement authorized full cash recording/bills independently, then Paymob sandbox intention, signed callback and authenticated inquiry. Missing external setup blocks only actual provider acceptance, not cash/reporting.
+Existing ASP.NET Core8 controllers, Blazor/Bootstrap, EF Core/SQL Server and Identity. No packages, new infrastructure or migrations. Current API supports authorized cash and capability-scoped payment status only.
 
-## Technical Context
+## Constitution check
 
-**Language/Version**:C#/.NET8.
-**Primary Dependencies**:Existing ASP.NET Core controllers, Blazor/Bootstrap, Identity/EF Core8 SQL Server; built-in HttpClient, HMACSHA512 and Data Protection. No new packages.
-**Storage**:Existing SQL Server, additive migration only. PaymentAttempt and PaymentSettlement tables, Order.PaymentRevision bigint touch column for rowversion concurrency.
-**Testing**:Reviewed migration, targeted manual SQL/HTTP/browser diagnostics, builds/publish. Actual provider sandbox checks remain pending without keys/public callback; no simulated success or default test project.
-**Target Platform**:Existing HTTPS web host.
-**Project Type**:Single existing project.
-**Performance Goals**:Short local transactions, bounded inquiry timeouts, no external calls within local transaction.
-**Constraints**:One full receipt, exact decimal/checked integer piasters, current Cashier checks, private guest access, fixed Paymob Egypt origin, test-only key/method guards, no secret/raw callback logging.
-**Scale/Scope**:One cafe, full cash or one sandbox provider payment, per-order invoice/bill; no refunds/partial/tax extensions.
+PASS: preserve code in verified archive before runtime removal; retain immutable schema, accounts and records; keep server authorization, exact money, locking, historical bills, privacy and responsive controls. The user's explicit cash-only decision supersedes the historical online-payment scope; governing principles remain applicable if online payments are ever separately reauthorized.
 
-## Constitution Check
+## Design and sequence
 
-PASS before and after design:single concrete services; preserve existing source/data; fresh server auth and private capability lookup; HMAC/authenticated inquiry only for payment success; unique/transactional payment effects and immutable totals; responsive interfaces; targeted honest validation; explicit approved provider/mode/safety rules. No deviations.
+1. Archive exact ten affected source files, unfinished tracked diff and prior Feature004 artifacts under archive/paymob-20261030; verify SHA-256 manifest before removal.
+2. Restore previously validated cash-only controller/panel/Program portions while retaining current application features. Remove Paymob client/service/webhook/return/options from compiled sources after archiving. Remove provider-only action contracts and PaymentService options dependency.
+3. Keep PaymentStatus.OnlineAvailable for API compatibility but always return false. Show cash-at-counter/pickup instructions. Preserve historical sandbox projection/revenue exclusion and pending guards; never alter database records or constraints.
+4. Revise specifications, contracts, research, task dispositions, setup and handoff. Preserve task IDs. T009–T013 become removed, never passed. T014 is cash-only billing and can complete based on prior cash-bill evidence plus scoped validation.
+5. Build Debug/Release and publish fresh inactive output. On an isolated loopback validation host verify removed routes404, current public/status/cash authorization and no checkout UI/provider dependencies. Reuse existing successful cash/ordering/report evidence. No provider, phone, firewall, certificate or public-exposure action.
+6. Review staged contents, secret patterns and archive hashes; commit/push verified scope change to origin/master.
 
-## Project Structure
+## Delivery status
 
-- Domain/PaymentAttempt.cs, PaymentSettlement.cs and Order.PaymentRevision
-- Infrastructure/Persistence/Configurations/PaymentConfiguration.cs and additive Migrations/
-- Contracts/PaymentContracts.cs
-- Application/PaymentService.cs (cash/status/shared settlement), PaymobOptions.cs, PaymobClient.cs, PaymobPaymentService.cs
-- Controllers/PaymentsController.cs, PaymobWebhookController.cs
-- Components/Shared/PaymentPanel.razor; integrate staff OrderDetail and private TrackOrder
-- Program.cs registration and existing PosOrderService payment-aware rejection
-
-## Transaction design
-
-Order-first UPDLOCK,HOLDLOCK within short Serializable transactions for starting attempts, settling cash/provider and rejecting orders. Every payment-state mutation increments Order.PaymentRevision, forcing existing rowversion to change. Status rejection rechecks payment/attempt state within its transaction. Unique settlement OrderId prevents double settlement; unique provider transaction ID prevents assigning one payment twice. No external call inside a database transaction.
-
-Persist Creating attempt/reference and commit before intention POST. An uncertain external response retains Uncertain and cannot automatically create another attempt. Persist returned provider order/id/encrypted client secret before exposing hosted link. Shared verified-settlement operation checks expected signed/authenticated fields and atomically records one receipt, increments order revision and marks attempt Succeeded. Verified failure is distinct from unknown; pending/unknown states continue to block cash/rejection. Duplicate accepted notifications return success without duplicate effects; conflicting evidence never overwrites receipts.
-
-## Complexity Tracking
-
-No violations. Data Protection is built-in and protects the intention client secret at rest; provider credentials remain UserSecrets/environment only. Do not add retries, provider packages or background reconciliation jobs.
+Original total169 contains five removed provider tasks. Active original tasks164; after cash-only T014 acceptance160 complete and four real-phone/final-acceptance tasks remain pending. Do not claim original169/169 or physical acceptance.

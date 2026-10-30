@@ -1,3 +1,5 @@
+> Historical research only. Paymob was removed from current scope by user approval on2026-10-30. No registration or credentials are needed. See README.md and archive/paymob-20261030.
+
 # Payment sandbox eligibility investigation — 30 October 2026
 
 This is a personal portfolio project with no registered company. No account was created, no credentials invented, no support message sent, and no provider was replaced. The existing Paymob code remains preserved locally. This investigation supersedes any earlier instruction to complete merchant onboarding before confirming developer eligibility.

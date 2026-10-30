@@ -36,3 +36,5 @@ Independent acceptance:customer,POS,Admin,login share coherent readable theme an
 ## Dependencies / strategy
 
 Setup→service/contracts→endpoint→dashboard/navigation→targetedreportvalidation→sharedtheme→cross-screenvalidation→delivery. Report implementation is independent of pending actual Paymob sandbox setup. Noparallel edits ofProgram/layout/styles; read-onlyplanresearch canrunindependently. MVPUS1 thenUS2 continuesautomatically. Knownprovider/phone/nativegapsdonotbecomecompleted tasks fromstyling/buildalone. No newDBmigration,export/analytics packageorbusinessrules.
+
+Scope revision2026-10-30: Paymob is removed from current delivery (five provider tasks cancelled, not passed). Cash-only Feature004 is11/11; current total160/164 active original tasks. Real Android/final-acceptance markers remain unchanged. See requirements.md and the latest root handoff; older provider setup notes are historical.

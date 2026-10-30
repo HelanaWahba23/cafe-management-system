@@ -70,7 +70,6 @@ builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<PosOrderService>();
 builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<AdminReportService>();
-builder.Services.Configure<PaymobOptions>(builder.Configuration.GetSection("Paymob"));
 builder.Services.AddScoped<CartState>();
 builder.Services.AddOptions<PublicMenuOptions>()
     .Bind(builder.Configuration)

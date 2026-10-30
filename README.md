@@ -1,135 +1,70 @@
 # Cafe Management System
 
-A single ASP.NET Core 8 application with Blazor Server interfaces, Bootstrap, EF Core, SQL Server and Identity. Customers order by table QR or pickup, cashiers manage fulfillment and record cash, and Admin reviews order activity and recorded cash.
+A portfolio cafe application built with ASP.NET Core8, Blazor Server, Bootstrap, EF Core, SQL Server and Identity.
 
-## Current status — 30 October 2026
+Customers order dine-in through table QR or place pickup orders directly. Cashiers manage dine-in, pickup and walk-in orders, update fulfillment, view saved bills and record full cash receipts. Admin manages menu/tables and views order and cash reports.
 
-Verified acceptance remains **159/169**. See [payment sandbox eligibility findings](PAYMENTS-ACCESS.md), [external acceptance instructions](EXTERNAL-ACCEPTANCE.md), and [isolated staging/deployment guidance](DEPLOYMENT.md). Paymob access for an Egyptian individual without a company is not confirmed by public documentation; request sandbox-only eligibility guidance before merchant registration. No provider change or public deployment has been made.
+## Current scope and acceptance —30 October2026
 
-| Feature | Validated tasks | Status |
+**Payment is cash at the cafe counter or on pickup. Online ordering remains available; online payment is removed. No Paymob account or keys are required.** All unfinished provider source/design is recoverably preserved in archive/paymob-20261030, outside compilation.
+
+| Feature | Completed active tasks | Remaining |
 | --- | ---: | --- |
-| Menu & Table Management | 54/56 | Implemented; physical-phone QR and final acceptance remain pending. |
-| Customer Ordering | 61/63 | Dine-in, pickup, checkout, reconfirmation, duplicate recovery, private tracking and native navigation validated. Physical-phone and final acceptance remain pending. |
-| Cashier & POS | 22/22 | Validated and pushed as `3a30dea`. |
-| Payments & Billing | 10/16 | Validated cash ledger/UI pushed as `0b9038c`. Paymob sandbox implementation is prepared locally and unverified. |
-| Admin Dashboard & Reports | 12/12 | Reports, responsive theme, builds, authorization and preservation validated; pushed as `8657b2e`. |
+| Menu & Tables |54/56|Real Android QR and final acceptance|
+| Customer Ordering |61/63|Real Android journeys and final acceptance|
+| Cashier & POS |22/22|None|
+| Cash Payments & Billing |11/11|None; five original provider tasks removed, not passed|
+| Dashboard & Reports |12/12|None|
 
-This is an implementation checkpoint, not a claim that all five features are accepted. The latest code milestone is `18d6a67`, pushed to origin/master. See [the current handoff](IMPLEMENTATION-HANDOFF.md) before resuming; it supersedes historical checkpoints in feature documents. Read the implementation handoffs before resuming work or changing a running host.
+**160/164 active tasks complete**, plus5 removed from the original169. Four real-phone/final-review tasks remain unperformed. This is not169/169 or a claim of phone acceptance. The approved decision is in requirements.md and specs/004-payments-billing; historical scope/documents remain archived.
 
 ## Run locally
 
-Prerequisites: .NET 8 SDK and SQL Server with an existing or explicitly chosen development database. Use HTTPS; Identity and antiforgery cookies are secure cookies.
+Prerequisites: .NET8 SDK, SQL Server and a valid local HTTPS certificate. Preserve existing credentials, accounts and database. Existing workspace needs no migration or bootstrap for this scope change.
+
+For a fresh explicitly chosen environment only:
 
 ```powershell
 dotnet tool restore
 dotnet restore CafeManagement.sln
-
 dotnet user-secrets set "ConnectionStrings:CafeDatabase" "<your SQL Server connection string>" --project CafeManagement.Api
 dotnet user-secrets set "PublicWebBaseUrl" "https://localhost:7128" --project CafeManagement.Api
 ```
 
-Keep credentials outside Git. Preserve the existing connection and accounts when resuming this workspace. Before applying migrations to an existing database, take and verify a current SQL backup and confirm the target. Never delete or reset the database.
+Keep actual credentials outside Git/chat and prefer protected interactive/private configuration over command history. Before applying reviewed migrations to an existing selected database, take and verify a current backup and confirm the target. Never delete/reset the database.
 
 ```powershell
 dotnet ef migrations list --project CafeManagement.Api
 dotnet ef database update --project CafeManagement.Api
-dotnet build CafeManagement.sln
 dotnet run --project CafeManagement.Api --launch-profile https
 ```
 
-The HTTPS profile listens on `https://localhost:7128`. `PublicWebBaseUrl` must match the actual trusted HTTPS origin. Check the local development certificate with `dotnet dev-certs https --check`; handle any certificate trust setup explicitly rather than bypassing a browser warning.
+HTTPS profile listens on https://localhost:7128. PublicWebBaseUrl must match the actual trusted origin. Do not bypass browser certificate warnings or install trust automatically.
 
-Entry points in the complete working tree:
+## Entry points
 
-- `/menu/pickup`: customer pickup menu, without a QR code.
-- `/menu/t/{publicCode}`: dine-in menu from an existing table QR.
-- `/orders/track#key=…`: private link generated after checkout. Keep the link private; its credential is never an order reference or table identifier.
+- `/menu/pickup`: direct customer pickup.
+- `/menu/t/{publicCode}`: existing table QR dine-in menu.
+- `/orders/track#key=…`: private tracking/bill link from checkout; keep it private.
 - `/account/login`: staff sign-in.
-- `/pos/orders`: Cashier queue, walk-ins, fulfillment and bills.
-- `/admin/dashboard`: Admin order and cash reports.
-- `/admin/categories`, `/admin/products`, `/admin/tables`: existing management.
+- `/pos/orders`: Cashier queue, walk-ins, fulfillment and cash bills.
+- `/admin/dashboard`: Admin order/cash reports.
+- `/admin/categories`, `/admin/products`, `/admin/tables`: menu and table management.
 
-Customer UI native navigation is now accepted and the dashboard is pushed. The pushed cash milestone deliberately excludes unverified Paymob endpoints. The existing `CafeManagement` development database received the reviewed `AddCounterOrders` and `AddPaymentLedger` migrations after a fresh COPY_ONLY/CHECKSUM backup and RESTORE VERIFYONLY. Prior row/account/QR fingerprints were preserved. For another environment, confirm the target and repeat backup/preservation before applying migrations.
+Existing Admin/Cashier accounts are preserved. On a fresh selected database only, configure Bootstrap:Email, Bootstrap:Password and Bootstrap:Role (Admin or Cashier) privately, run `dotnet run --project CafeManagement.Api --launch-profile https -- --bootstrap-user`, then remove Bootstrap:Password. The command neither promotes an existing account nor replaces its password; ordinary startup does not provision users.
 
-## Staff accounts
+## Workflow rules
 
-Existing Admin and Cashier accounts are retained. No password, default account or secret is committed. On a fresh, explicitly chosen database only, the existing operator command can create a role-specific account:
+The server validates availability, quantities and current prices. Price changes require explicit reconfirmation; saved item names/prices/table labels remain historical. Online customer name/phone are required; Cashier walk-in contacts are optional.
 
-```powershell
-dotnet user-secrets set "Bootstrap:Email" "<staff email>" --project CafeManagement.Api
-dotnet user-secrets set "Bootstrap:Password" "<staff password>" --project CafeManagement.Api
-dotnet user-secrets set "Bootstrap:Role" "Admin" --project CafeManagement.Api
-dotnet run --project CafeManagement.Api --launch-profile https -- --bootstrap-user
-dotnet user-secrets remove "Bootstrap:Password" --project CafeManagement.Api
-```
+Customer access is a private capability; table QR is not staff authority. Fulfillment is Submitted→Preparing→Ready→Completed, or Submitted→Rejected with a reason. Cash records one full saved EGP amount, cashier and UTC time. Paid orders cannot be rejected. Any preserved pending/uncertain historical attempt continues blocking cash/rejection; scope removal never force-unlocks data.
 
-Use role `Cashier` for the cashier account. The command does not promote an existing account or replace its password. It does not run during ordinary startup.
+Reports separate creation-date order counts and receipt-date cash revenue, labelled UTC. Historical sandbox values remain excluded from cash revenue. There are no delivery, refunds, partial/split payments or invented taxes.
 
-## Workflows and boundaries
+## Build, evidence and deployment
 
-- Customer dine-in uses an existing table QR; pickup needs no QR. Online customer name and phone remain required.
-- Cashier walk-ins support an existing dine-in table or takeaway without a table. Contacts are optional.
-- The server validates availability, quantities and current prices. Price changes require explicit reconfirmation; saved line names/prices and table labels remain historical snapshots.
-- Private customer access uses a random capability whose hash is stored on the server. Staff authority comes from current Identity membership and security-stamp checks.
-- Fulfillment is Submitted → Preparing → Ready → Completed, or Submitted → Rejected with a reason. Paid orders cannot be rejected; pending/uncertain online attempts block rejection and cash until reconciliation.
-- Full cash receipt records the saved EGP amount, cashier and UTC time once. Order/payment state changes share an order lock and concurrency version.
-- Reports use order creation dates for counts and receipt recording dates for cash. Both are labelled UTC. Sandbox values are separated from real recorded-cash revenue.
-- No delivery, live online payments, refunds, split/partial payments, invented taxes or advanced analytics are implemented.
+Debug/Release builds and cash-only Release publish passed with zero warnings/errors. Twelve scoped HTTPS route/privacy/authorization checks passed; prior cash/customer/POS/reporting and responsive checks are retained. See [deployment and validation](DEPLOYMENT.md), [payment evidence](specs/004-payments-billing/validation.md) and [handoff](IMPLEMENTATION-HANDOFF.md).
 
-## Paymob sandbox setup and remaining acceptance
+The current source exposes no online initiation/reconciliation, Paymob webhook or payment-return route. Old provider settings cannot enable these features. No payment-related schema/migration/data changes were made.
 
-Approved provider: Paymob Egypt, EGP, Hosted Unified Checkout, test/sandbox only. No successful Paymob transaction has been simulated or verified. The prepared online implementation remains local until actual sandbox acceptance.
-
-Required local User Secrets keys:
-
-- `Paymob:Enabled` (default false; do not enable before the integration is ready for sandbox validation).
-- `Paymob:SecretKey`, `Paymob:PublicKey`, `Paymob:HmacSecret`, `Paymob:ApiKey`.
-- `Paymob:IntegrationId`: a confirmed test card integration.
-- `Paymob:CallbackBaseUrl`: an approved, publicly reachable, trusted HTTPS origin.
-
-There is no separate Egypt sandbox hostname: test keys and test integration selection determine mode. The local implementation rejects live key prefixes and live/mismatched evidence. Paymob cannot call a loopback URL. No account, tunnel, firewall change or certificate bypass has been created automatically.
-
-The proposed callback is `/api/payments/paymob/webhook`; `/payments/return` is informational and never settles a payment. Only backend-verified HMAC/authenticated inquiry matching the saved order, amount, EGP and test integration may settle. Duplicate notifications must not create another receipt.
-
-Actual sandbox success, failure, interrupted initiation, reconciliation and duplicate callbacks remain pending. An unsuccessful transaction alone does not prove the hosted intention can no longer be paid; the implementation conservatively keeps such outcomes blocking until verified. Lost checkout-link and terminal-failure recovery usability must be confirmed with the real merchant sandbox before acceptance.
-
-Official references: [Create Intention](https://developers.paymob.com/paymob-docs/intention-apis/create-intention), [HMAC verification](https://developers.paymob.com/paymob-docs/developers/webhook-callbacks-and-hmac/hmac/hmac-transaction-callback), [transaction inquiry](https://developers.paymob.com/paymob-docs/developers/transaction-inquiry-apis/by-order-id-or-reference).
-
-## Validation and remaining manual checks
-
-Build and publish:
-
-```powershell
-dotnet build CafeManagement.sln -c Release --no-restore
-dotnet publish CafeManagement.Api -c Release --no-restore -o artifacts/cafe
-```
-
-No automated test framework was added. Focused temporary diagnostics used an owned database copy and removed only their recorded fixture rows. Evidence records exact successes and blockers:
-
-- [Customer ordering evidence](specs/002-customer-ordering/end-to-end-validation.md).
-- [Pending phone acceptance](specs/002-customer-ordering/pending-browser-validation.md).
-- [POS evidence](specs/003-cashier-pos/validation.md).
-- [Cash/payment evidence](specs/004-payments-billing/validation.md).
-- [Dashboard handoff](specs/005-admin-dashboard-reports/implementation-handoff.md).
-
-Still required: real-phone QR/rescan/pickup/private-link checks on an approved reachable HTTPS origin and actual Paymob sandbox setup/confirmation. Native Reload/Pickup Stay/Leave passed in isolated Edge. Local responsive emulation and cryptographic vectors do not replace the remaining external checks.
-
-## Resume safely
-
-### Final setup checklist — 30 October 2026
-
-- [x] Read the latest handoff, remaining task markers and all uncommitted provider changes; preserve the prepared integration locally.
-- [x] Retain completed cash/POS/reports/customer-navigation validation without rerunning successful functional checks.
-- [x] Final full-working-tree Debug and Release builds: zero warnings/errors. Release publish succeeded to the new, inactive `artifacts/finalization-20261030-publish` directory. This includes unaccepted provider code and is not a deployment or sandbox acceptance.
-- [x] Existing database backup, additive migrations and account/QR preservation are recorded in the handoff; no database changes were needed for this checkpoint.
-- [ ] Feature 001 T051/T056 and Feature 002 T059/T063: real Android phone, approved reachable trusted HTTPS origin, QR entry/rescan after table rename, pickup without table and private-link journeys; then final acceptance review.
-- [ ] Feature 004 T009–T014: actual Paymob Egypt test credentials/integration and approved public HTTPS callback/return origin; verify protocol/response shapes, hosted success/failure, authenticated inquiry, signed callbacks, duplicate/out-of-order events, interrupted initiation and terminal/lost-link recovery, then full provider billing acceptance.
-- [ ] Commit the prepared provider source only after genuine sandbox acceptance. Local non-success HMAC vectors and builds do not satisfy this gate.
-
-Follow each feature's `implementation-handoff.md`, `tasks.md` and validation evidence. Preserve all local work. Never stage every file blindly: `Program.cs`, `PaymentsController.cs` and `PaymentPanel.razor` contain additional unverified Paymob changes beyond the pushed cash versions. Git history preserves the validated milestones; no force-push or database reset is needed.
-
-### Verified resume — 30 October 2026
-
-Starting local and remote master both verified at `d94c845`. Acceptance remains **159/169**; all ten external-gated task markers stay pending. All seven required Paymob User Secrets keys are absent, confirmed without printing values. The prepared inquiry client now follows official JSON authentication; both selector paths passed intercepted HTTP checks, and the changed full working tree passed Release build with zero warnings/errors. Provider work remains local pending genuine acceptance.
-
-Follow [complete external setup and acceptance steps](EXTERNAL-ACCEPTANCE.md). Required operator inputs are local Paymob Egypt test credentials/integration, approval for temporary public HTTPS (or an approved staging origin), the selected test database, a real Android phone/operator, and provider-supported failure/terminal recovery guidance. No tunnel, firewall, certificate trust, host or database changes were made.
+[Remaining Android acceptance](EXTERNAL-ACCEPTANCE.md) requires an approved reachable HTTPS test origin and a real phone operator. Public staging/tunnels/firewall/trust changes require approval; none was created. Prefer an isolated staging database and separate test staff accounts.

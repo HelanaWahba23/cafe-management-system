@@ -21,7 +21,7 @@
                 <button type="button" class="btn btn-primary" disabled="@(!cashConfirmed)" @onclick="RecordCash">Record cash received</button>
             </fieldset></form>
         }
-        @if (StaffOrderId is null && status.State == "Unpaid" && !status.OnlineAvailable) { <p class="text-secondary">Online payment is currently unavailable. Please pay at the cafe counter.</p> }
+        @if (StaffOrderId is null && status.State == "Unpaid") { <p class="text-secondary">Pay in cash at the cafe counter or when collecting your pickup order.</p> }
 
     }
 </section>

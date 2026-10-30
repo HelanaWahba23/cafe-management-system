@@ -5,12 +5,10 @@ using CafeManagement.Api.Contracts;
 using CafeManagement.Api.Domain;
 using CafeManagement.Api.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace CafeManagement.Api.Application;
 
-public sealed class PaymentService(IDbContextFactory<CafeDbContext> factory, StaffAccess staff,
-    IOptions<PaymobOptions> options)
+public sealed class PaymentService(IDbContextFactory<CafeDbContext> factory, StaffAccess staff)
 {
     public async Task<(StaffPaymentStatus? Value, OperationError? Error)> GetStaffAsync(ClaimsPrincipal principal,
         long id, CancellationToken ct = default)
@@ -108,8 +106,7 @@ public sealed class PaymentService(IDbContextFactory<CafeDbContext> factory, Sta
         var state = payment is not null ? payment.Method == "Cash" ? "PaidCash" : "PaidSandbox"
             : active is null ? "Unpaid" : active.State is "Uncertain" or "Creating" ? "Uncertain" : "Pending";
         return new(state, payment?.Method, order.Total.ToString("F2", CultureInfo.InvariantCulture), order.Currency,
-            payment?.RecordedAtUtc, options.Value.IsReady && order.Origin == OrderOrigin.Customer && order.Status != OrderStatus.Rejected
-                && payment is null);
+            payment?.RecordedAtUtc, false);
     }
 
     private static OperationError Missing() => new(OperationErrorKind.NotFound, "This order payment could not be found.");

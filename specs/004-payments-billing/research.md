@@ -15,7 +15,7 @@ Sources:[official HMAC transaction callback](https://developers.paymob.com/paymo
 
 ## Authenticated reconciliation
 
-Decision:POST /api/auth/tokens with API key, then Bearer token POST /api/ecommerce/orders/transaction_inquiry with stored order_id or merchant_order_id stable attempt reference; GET /api/acceptance/transactions/{transaction_id} is a secondary supported inquiry. Validate response exact order/amount/EGP/test integration and is_live=false; shared settlement checks. No automatic retry of uncertain intention creation.
+Decision:POST /api/auth/tokens with API key, then POST /api/ecommerce/orders/transaction_inquiry with JSON auth_token and stored order_id or merchant_order_id stable attempt reference; GET /api/acceptance/transactions/{transaction_id} is a secondary supported inquiry. The current official order/reference guide requires the token in the body; the prepared client was corrected accordingly on resume. Validate response exact order/amount/EGP/test integration and is_live=false; shared settlement checks. No automatic retry of uncertain intention creation.
 Rationale:Official linked Postman collection gives full endpoints where current guide renders incomplete examples; API key may cover both modes, so verify each result's mode/integration. Inquiry by reference returns latest transaction; unknown/no transaction is not proof an existing payable intention is cancelled.
 Sources:[official Transaction Inquiry collection](https://raw.githubusercontent.com/PaymobAccept/API-Postman-Collections/refs/heads/main/Transaction%20Inquiry%20API.postman_collection.json), [order/reference guide](https://developers.paymob.com/paymob-docs/developers/transaction-inquiry-apis/by-order-id-or-reference).
 

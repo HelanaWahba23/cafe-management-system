@@ -11,6 +11,8 @@ The verified starting commit is `d94c845`, also confirmed on remote master. Acce
 
 ## Paymob account and local configuration
 
+For this personal portfolio, first read [the official-source eligibility investigation](PAYMENTS-ACCESS.md). Developer-only access without a company is not confirmed; do not complete merchant onboarding or invent company details on the strength of these setup instructions. Request Paymob's explicit sandbox-only guidance first.
+
 Sign in to the Paymob Egypt merchant dashboard. Select test mode. Under **Developers → Payment Integrations**, select or request an online card integration in EGP whose test mode matches the keys. Obtain the test Secret Key, Public Key, API Key and HMAC secret from the account's integration credentials/settings. Dashboard labels may vary; if unavailable, use the official onboarding wizard or merchant support. Never substitute a live integration.
 
 Official references checked for this resume:
@@ -53,15 +55,15 @@ Do not run `user-secrets list` into logs/chat. No credential validity or provide
 
 ## Temporary HTTPS plan — prepared, not activated
 
-Use a short-lived [Cloudflare Quick Tunnel](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/) to an isolated loopback HTTPS host. No firewall change or trusted certificate installation is needed. The client is not currently installed. Download/install and activation require operator approval first. The tunnel URL makes the routed application publicly reachable; an unpredictable hostname alone is not access control. Paymob callbacks cannot pass an interactive email/password gate.
+Prefer an approved isolated HTTPS staging deployment with separate test database/accounts, as detailed in [deployment guidance](DEPLOYMENT.md). A short-lived [Cloudflare Quick Tunnel](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/) to an isolated loopback HTTPS test host is a fallback. No firewall change or trusted certificate installation is needed. The client is not currently installed. Download/install and activation require operator approval first. The tunnel URL makes the routed application publicly reachable; an unpredictable hostname alone is not access control. Paymob callbacks cannot pass an interactive email/password gate.
 
 After approval, verify the exact selected host/process and database before using it. Do not stop existing hosts or overwrite their publish folders. Keep origin TLS validation enabled. A proposed tunnel command, **only after approval**, is:
 
 ```powershell
-cloudflared tunnel --url https://localhost:7128
+cloudflared tunnel --url https://localhost:<approved-isolated-test-port>
 ```
 
-Use that port only if its verified process is the intended test host. If origin certificate validation fails, stop: use an explicitly verified public certificate file with the client's `--origin-ca-pool` option or another approved trusted origin. Do not use `--no-tls-verify`, HTTP forwarding, certificate-warning bypasses or automatic trust installation. Quick Tunnels have no uptime guarantee and the hostname changes after restart; verify Blazor's WebSocket connection on the phone.
+Replace the placeholder only after verifying that process and its separate test database; never default to development port 7128. If origin certificate validation fails, stop: use an explicitly verified public certificate file with the client's `--origin-ca-pool` option or another approved trusted origin. Do not use `--no-tls-verify`, HTTP forwarding, certificate-warning bypasses or automatic trust installation. Quick Tunnels have no uptime guarantee and the hostname changes after restart; verify Blazor's WebSocket connection on the phone.
 
 Before creating test intentions, configure the same generated HTTPS origin as `PublicWebBaseUrl` and `Paymob:CallbackBaseUrl` in the selected test host's configuration. Apply configuration by restarting only that verified host; preserve prior values for restoration. Published Production hosts do not automatically load development User Secrets: use a controlled Development test host or supply configuration privately to that process. Verify anonymous menu and staff authorization before sharing the URL.
 
@@ -83,3 +85,15 @@ Do not enable request-body/query logging: callbacks and return URLs can contain 
 Record time, host/build, device/browser, provider test transaction ID, observed state and receipt count in the relevant validation documents. Redact capabilities, keys, card/customer data and raw payloads. Do not manufacture a signed successful callback to replace a real provider test. Current failure/unknown-intention behavior deliberately stays blocking; lost checkout links have no validated reopen path, so this usability gate must be resolved before final provider acceptance.
 
 After genuine checks, fix any discovered protocol/recovery issues, run checks appropriate to those changes, update task markers and totals, then commit the exact verified provider files. Until then preserve all seven provider paths uncommitted. No external task is passed by this setup document.
+
+## Android operator record — all results currently NOT RUN
+
+Record date/time, Android version, Chrome version, test build and approved origin before starting. Use a signed-out Chrome session with no staff cookies and normal privacy/TLS settings. Keep staff actions in a separate browser/session. Use only the approved test database; record any created order IDs privately for later reviewed cleanup.
+
+1. Display/download the two existing table QR codes from the staging Admin Tables screen. Scan the first with the phone camera, open Chrome, and confirm correct table label, products/prices and no login requirement. Repeat with the second; verify the context changes to the second table.
+2. In the staff session, record the original label and rename the first table. Scan its **previously saved** QR on Android. Confirm the new label and same underlying table; record the result, then restore the original label if the session plan calls for it. Do not regenerate/change its public identifier.
+3. Add an available item from that dine-in menu; change quantity; review total and table. Submit a test order with operator-approved contact details. Confirm one order/reference and correct table in the cashier view. Keep the generated private tracking link on the phone.
+4. Open/revisit the retained tracking link in the same Android session. Confirm itemization and total remain historical. Have the Cashier move the order through approved fulfillment states and refresh tracking to confirm updates. A different/missing key must not reveal the order. Do not paste the private URL into an evidence file.
+5. Navigate directly to `/menu/pickup` in a fresh signed-out tab. Confirm no table/QR requirement. Add an item, complete pickup checkout and verify the private link and cashier queue both identify pickup without a table. Confirm one order after a deliberate refresh/revisit, not another submission.
+6. On the actual device, check readable labels, touch controls, quantity/validation messages, keyboard behavior, no horizontal scrolling and Blazor reconnect feedback. Record any failure with a redacted screenshot and exact step. Existing desktop responsive/native-dialog evidence is supplementary.
+7. Record each observed result against 001 T051 and 002 T059. Only after every required scenario passes, reconcile final acceptance for 001 T056 and 002 T063. Leave failed or unperformed checks pending. Do not mark a phone result passed from desktop emulation or from merely loading a public URL.

@@ -2,7 +2,9 @@
 
 A single ASP.NET Core 8 application with Blazor Server interfaces, Bootstrap, EF Core, SQL Server and Identity. Customers order by table QR or pickup, cashiers manage fulfillment and record cash, and Admin reviews order activity and recorded cash.
 
-## Current status — 29 October 2026
+## Current status — 30 October 2026
+
+Verified acceptance remains **159/169**. See [payment sandbox eligibility findings](PAYMENTS-ACCESS.md), [external acceptance instructions](EXTERNAL-ACCEPTANCE.md), and [isolated staging/deployment guidance](DEPLOYMENT.md). Paymob access for an Egyptian individual without a company is not confirmed by public documentation; request sandbox-only eligibility guidance before merchant registration. No provider change or public deployment has been made.
 
 | Feature | Validated tasks | Status |
 | --- | ---: | --- |

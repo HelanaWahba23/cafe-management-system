@@ -53,3 +53,7 @@
 ## Approved scope revision —2026-10-30
 
 The user approved removing Paymob through Spec Kit because account setup is unavailable. Current payment scope is cash only. Provider source and prior planning are archived recoverably; no credentials, data, accounts, QR identifiers or migrations are deleted. Original T009–T013 are cancelled/out of scope, not passed. T014 retains cash-only billing acceptance. The four real-phone/final-acceptance tasks in Features001/002 remain pending; they were not waived by this payment scope change.
+
+## Approved acceptance revision —2026-10-30
+
+The user explicitly approved mobile browser emulation and corresponding Spec Kit acceptance updates in place of physical-device testing. Remaining T051/T056 (Feature001) and T059/T063 (Feature002) can complete only after actual automated QR/rename/dine-in/pickup/private-tracking checks and final coverage review. Do not claim real Android/camera/network testing. Preserve existing records and avoid public exposure.

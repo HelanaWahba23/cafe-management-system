@@ -1,3 +1,11 @@
+## Final approved emulated acceptance —2026-10-30
+
+The user explicitly approved mobile-browser emulation in place of physical Android acceptance. The four remaining tasks passed under that revised scope: actual QR PNG decoding for two tables, correct anonymous touch/mobile contexts, Admin rename/saved-QR continuity, dine-in/pickup checkout and cashier association, private-link reload/second-context revisit and invalid/missing access denial, status update and responsive/focus checks.55 checks passed on isolated Edge156 with sandbox and normal TLS, using the cash-only publish from70fb29f. No hardware/camera/public-phone-network acceptance is claimed.
+
+Exact run-owned fixture cleanup passed. All15-table row fingerprints match in both original and validation-copy databases; prior accounts, QR identifiers and migrations preserved. The owned7278 host was stopped after matching PID/DLL/port; existing hosts retained. No application source changed or public exposure/certificate/firewall change occurred.
+
+Final coverage review reconciles Feature00111FR/8SC and Feature00213FR/8SC with recorded prior evidence and the new result. Later authorized POS/cash/reports are not scope violations of earlier features. See FINAL-ACCEPTANCE.md and specs/mobile-emulation-result.json. All active original tasks are complete164/164;5 Paymob tasks are removed, not passed. Earlier physical-phone blockers below are historical and superseded only by the explicit user-approved emulation revision.
+
 # Customer Ordering validation — 2026-10-29
 
 ## Current result

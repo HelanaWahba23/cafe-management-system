@@ -137,4 +137,9 @@ and obtain explicit approval before proceeding with it.
 
 User explicitly approved removing Paymob/online payment using Spec Kit. Cash billing, online ordering and all existing records remain supported; provider source is archived. This narrows the confirmed product scope without weakening authorization, consistency, preservation or honest acceptance rules. Physical-device acceptance remains unperformed. Requirements and Feature004 artifacts must reflect this revision.
 
-**Version**: 1.1.0 | **Ratified**: 2026-10-25 | **Last Amended**: 2026-10-30
+**Version**: 1.2.0 | **Ratified**: 2026-10-25 | **Last Amended**: 2026-10-30
+
+
+## Approved acceptance amendment —2026-10-30
+
+The user explicitly authorized automated mobile-browser emulation instead of physical Android acceptance for the portfolio. Product mobile behavior remains required, and actual generated QR images, signed-out contexts, correct table after rename, pickup and private tracking must be tested. Evidence must state the emulation scope; never claim hardware/camera/physical-network verification. Constitution VI honesty and preservation rules remain unchanged.

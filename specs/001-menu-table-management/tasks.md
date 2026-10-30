@@ -1,3 +1,11 @@
+## Final approved emulated acceptance —2026-10-30
+
+The user explicitly approved mobile-browser emulation in place of physical Android acceptance. The four remaining tasks passed under that revised scope: actual QR PNG decoding for two tables, correct anonymous touch/mobile contexts, Admin rename/saved-QR continuity, dine-in/pickup checkout and cashier association, private-link reload/second-context revisit and invalid/missing access denial, status update and responsive/focus checks.55 checks passed on isolated Edge156 with sandbox and normal TLS, using the cash-only publish from70fb29f. No hardware/camera/public-phone-network acceptance is claimed.
+
+Exact run-owned fixture cleanup passed. All15-table row fingerprints match in both original and validation-copy databases; prior accounts, QR identifiers and migrations preserved. The owned7278 host was stopped after matching PID/DLL/port; existing hosts retained. No application source changed or public exposure/certificate/firewall change occurred.
+
+Final coverage review reconciles Feature00111FR/8SC and Feature00213FR/8SC with recorded prior evidence and the new result. Later authorized POS/cash/reports are not scope violations of earlier features. See FINAL-ACCEPTANCE.md and specs/mobile-emulation-result.json. All active original tasks are complete164/164;5 Paymob tasks are removed, not passed. Earlier physical-phone blockers below are historical and superseded only by the explicit user-approved emulation revision.
+
 ---
 description: "Dependency-ordered implementation tasks for Menu and Table Management"
 ---
@@ -777,7 +785,7 @@ staff session is needed for browsing; ordering/payment/POS services are unnecess
 **Goal**: Validate the complete feature, circuit recovery, preservation and publish readiness.
 No unrelated cleanup, speculative optimization or additional business features.
 
-- [ ] T051 Scan both table QR codes from a real signed-out phone using the verified reachable HTTPS origin configured through `CafeManagement.Api/Application/PublicMenuOptions.cs`; open `Components/Pages/Menu/TableMenu.razor`, rename one table using `Components/Pages/Admin/Tables.razor` and rescan its prior QR, confirming correct table/no login; record SC-002/003 outcomes or exact connectivity blockers here (after T043/T050; FR-006/007).
+- [x] T051 Decode actual QR PNGs for two existing validation-copy tables; open each in fresh signed-out mobile/touch browser emulation using trusted loopback HTTPS, rename one table through Admin UI and reopen the previously decoded QR to verify same table/new label/no login. Record results and preservation evidence, explicitly no physical Android test (approved acceptance revision2026-10-30; FR-006/007, SC-002/003).
 
 ### Physical-phone verification pending (T051, 2026-10-27)
 
@@ -798,7 +806,7 @@ No unrelated cleanup, speculative optimization or additional business features.
 - [X] T053 Review `CafeManagement.Api/Application/StaffAccess.cs`, `Infrastructure/Identity/IdentityRevalidatingAuthenticationStateProvider.cs`, `Program.cs` and account pages against `contracts/api.md`: verify API and component authorization, current-user/stamp/role checks, token rejection, cookie flags, safe redirects/errors and full-navigation identity changes; use local controlled stamp invalidation/two-tab checks without claiming ordinary logout instantly revokes every circuit (after T052; FR-001/008, SC-005/006).
 - [X] T054 Validate SQL/data/circuit behavior through `CafeManagement.Api/Infrastructure/Persistence/CafeDbContext.cs`, entity configurations and migration: simultaneous duplicate-label requests yield one accepted write/one conflict, FK/price/name constraints hold, independent tabs do not share tracked state, and restart retains all values/codes; record manual results here without touching unrelated data (after T053; FR-004/006/011).
 - [X] T055 Run `dotnet build CafeManagement.sln -c Release` and `dotnet publish CafeManagement.Api -c Release --no-restore -o artifacts/cafe`; inspect published local Bootstrap assets and compiled pages, recheck original `/WeatherForecast`/Swagger/ports plus direct menu/admin paths and unknown `/api/*` responses, and confirm `.gitignore` excludes output/secrets; record evidence here without deploying (after T054; Constitution II/VI).
-- [ ] T056 Review all acceptance scenarios in `specs/001-menu-table-management/spec.md` against this file's evidence and `quickstart.md`; confirm FR-001–FR-011/SC-001–SC-008 coverage, no deletion/deactivation/orders/POS/payments/reports endpoints/screens, no unnecessary generated tests, and no unapproved source removal; summarize completed/blocked/skipped validations in `specs/001-menu-table-management/tasks.md` for user review, never mark blocked checks passed (after T055).
+- [x] T056 Reconcile all Feature001 FR-001–FR-011/SC-001–SC-008 and scenarios against prior evidence plus approved emulated QR acceptance; review no catalog deletion/deactivation, scope-authorized later order/POS/cash/report features, code/archive/data preservation and no unnecessary generated tests. Record final acceptance with explicit emulation limitation (after T051/T055).
 
 ### Independent polish execution evidence (T052–T055, 2026-10-27)
 

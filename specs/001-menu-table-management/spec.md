@@ -1,10 +1,14 @@
+## Approved acceptance-mode revision —2026-10-30
+
+The user explicitly approved automated mobile-browser emulation instead of a physical Android device for this portfolio's remaining acceptance. References to phone scan/mobile journeys in acceptance scenarios are fulfilled by decoding the actual generated QR PNGs and navigating their URLs in a fresh signed-out touch/mobile browser context over trusted loopback HTTPS. Verify two table contexts, saved QR after label rename, direct pickup and private tracking/revisit/privacy. Use only the isolated validation database copy and preserve all original/copy records after exact fixture cleanup. This does not claim Android hardware, camera, physical Chrome or real-phone network acceptance. No public deployment/tunnel/certificate/firewall change is needed or authorized.
+
 # Feature Specification: Menu and Table Management
 
 **Feature Branch**: None created; feature directory is independent of the Git branch.
 
 **Created**: 2026-10-25
 
-**Status**: Clarified — ready for planning review
+**Status**: Accepted under the approved2026-10-30 mobile-emulation scope.
 
 **Input**: User description: "Menu and Table Management: admin manages menu categories,
 products, prices, availability, and cafe tables; each table has a unique QR code opening

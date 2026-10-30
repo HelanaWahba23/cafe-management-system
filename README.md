@@ -10,13 +10,13 @@ Customers order dine-in through table QR or place pickup orders directly. Cashie
 
 | Feature | Completed active tasks | Remaining |
 | --- | ---: | --- |
-| Menu & Tables |54/56|Real Android QR and final acceptance|
-| Customer Ordering |61/63|Real Android journeys and final acceptance|
+| Menu & Tables |56/56|Accepted with approved mobile emulation|
+| Customer Ordering |63/63|Accepted with approved mobile emulation|
 | Cashier & POS |22/22|None|
 | Cash Payments & Billing |11/11|None; five original provider tasks removed, not passed|
 | Dashboard & Reports |12/12|None|
 
-**160/164 active tasks complete**, plus5 removed from the original169. Four real-phone/final-review tasks remain unperformed. This is not169/169 or a claim of phone acceptance. The approved decision is in requirements.md and specs/004-payments-billing; historical scope/documents remain archived.
+**164/164 active original tasks complete**, plus5 removed from the original169. The user approved mobile-browser emulation in place of physical Android acceptance;55 checks and final coverage review passed. This is not169/169 successful tests or a claim of hardware/camera/network testing. The approved decision is in requirements.md and specs/004-payments-billing; historical scope/documents remain archived.
 
 ## Run locally
 
@@ -67,4 +67,4 @@ Debug/Release builds and cash-only Release publish passed with zero warnings/err
 
 The current source exposes no online initiation/reconciliation, Paymob webhook or payment-return route. Old provider settings cannot enable these features. No payment-related schema/migration/data changes were made.
 
-[Remaining Android acceptance](EXTERNAL-ACCEPTANCE.md) requires an approved reachable HTTPS test origin and a real phone operator. Public staging/tunnels/firewall/trust changes require approval; none was created. Prefer an isolated staging database and separate test staff accounts.
+[Final acceptance](FINAL-ACCEPTANCE.md) records the approved emulation scope and all completed tasks. [Physical-device limitations](EXTERNAL-ACCEPTANCE.md) remain explicit. Public deployment is optional and requires approval; none was created. Prefer an isolated staging database and separate test staff accounts.

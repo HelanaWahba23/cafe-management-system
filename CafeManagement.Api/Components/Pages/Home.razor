@@ -1,0 +1,43 @@
+@page "/"
+@attribute [AllowAnonymous]
+@layout PublicLayout
+
+<PageTitle>Café | Good coffee. Better moments.</PageTitle>
+<div class="cafe-home">
+    <section class="cafe-hero" aria-labelledby="cafe-welcome">
+        <img class="cafe-hero-image" src="/images/cafe-hero.png" alt="A cappuccino and golden croissant on a sunlit café table" width="1672" height="941" fetchpriority="high" />
+        <div class="cafe-hero-shade"></div>
+        <div class="cafe-hero-content">
+            <p class="cafe-overline"><span aria-hidden="true"></span> Your daily dose of something good</p>
+            <h1 id="cafe-welcome">Good coffee.<br /><em>Better moments.</em></h1>
+            <p class="cafe-hero-description">Slow down, find your favorite, and make a little room for the good things.</p>
+            <div class="cafe-hero-actions">
+                <a class="btn cafe-light-button" href="/menu/pickup" data-enhance-nav="false">Explore the menu <span aria-hidden="true">↗</span></a>
+                <a class="cafe-hero-about" href="#about">A little about us <span aria-hidden="true">↓</span></a>
+            </div>
+        </div>
+        <div class="cafe-hero-caption"><span aria-hidden="true">✦</span> A cup worth slowing down for.</div>
+    </section>
+
+    <section class="cafe-welcome-strip" aria-label="The Café experience">
+        <div><span class="cafe-strip-number" aria-hidden="true">01</span><div><h2>Find your favorite</h2><p>A little something for every mood.</p></div></div>
+        <div><span class="cafe-strip-number" aria-hidden="true">02</span><div><h2>Make it your moment</h2><p>Take a seat and enjoy the pause.</p></div></div>
+        <div><span class="cafe-strip-number" aria-hidden="true">03</span><div><h2>Good things to go</h2><p>Order ahead and collect at the café.</p></div></div>
+    </section>
+
+    <section id="about" class="cafe-about" aria-labelledby="cafe-about-title">
+        <div class="cafe-about-photo"><img src="/images/cafe-hero.png" alt="Warm café light, coffee and a croissant" width="1672" height="941" loading="lazy" /><span>Small moments. Well spent.</span></div>
+        <div class="cafe-about-copy">
+            <p class="eyebrow">Hello, we're Café</p>
+            <h2 id="cafe-about-title">Your cup.<br /><em>Your kind of place.</em></h2>
+            <p>For a quiet coffee, a catch-up, or a little break between everything else. Café is a simple invitation to slow down and enjoy your moment.</p>
+            <p>Browse the menu, choose what feels good, and enjoy it here or pick it up to go.</p>
+            <a href="/menu/pickup" class="cafe-text-link" data-enhance-nav="false">Find something you'll love <span aria-hidden="true">↗</span></a>
+        </div>
+    </section>
+
+    <section class="cafe-pickup-banner" aria-labelledby="cafe-pickup-title">
+        <div><p class="cafe-overline">A little Café, wherever your day takes you</p><h2 id="cafe-pickup-title">Your next good moment starts here.</h2></div>
+        <a href="/menu/pickup" class="btn cafe-light-button" data-enhance-nav="false">Order for pickup <span aria-hidden="true">↗</span></a>
+    </section>
+</div>

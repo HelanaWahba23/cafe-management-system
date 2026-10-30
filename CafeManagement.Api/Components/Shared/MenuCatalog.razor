@@ -8,7 +8,7 @@
 }
 @if (Categories.Length > 0)
 {
-    <nav aria-label="Menu categories" class="mb-4">
+    <nav aria-label="Menu categories" class="mb-4 cafe-category-nav">
         <ul class="nav gap-2">
             @foreach (var category in Categories)
             {
@@ -18,7 +18,7 @@
     </nav>
     @foreach (var category in Categories)
     {
-        <section class="card mb-3" aria-labelledby="@($"category-{category.Id}")" @key="category.Id">
+        <section class="card mb-3 cafe-menu-category" aria-labelledby="@($"category-{category.Id}")" @key="category.Id">
             <div class="card-body">
                 <h2 id="@($"category-{category.Id}")" class="h4" tabindex="-1">@category.Name</h2>
                 @if (category.Products.Length == 0)

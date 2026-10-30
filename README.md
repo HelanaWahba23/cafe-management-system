@@ -43,7 +43,7 @@ HTTPS profile listens on https://localhost:7128. PublicWebBaseUrl must match the
 
 ## Entry points
 
-- `/`: opens the customer pickup menu. Local launch profiles also open this customer interface; Swagger remains available at `/swagger` in Development only. GitHub displays source/README and does not host this ASP.NET application automatically.
+- `/`: the Café homepage with local photo, Home/Menu/About navigation and menu/order links. All launch profiles open this homepage. Swagger remains Development-only at `/swagger`; GitHub itself displays source/README.
 - `/menu/pickup`: direct customer pickup.
 - `/menu/t/{publicCode}`: existing table QR dine-in menu.
 - `/orders/track#key=…`: private tracking/bill link from checkout; keep it private.
@@ -69,3 +69,8 @@ Debug/Release builds and cash-only Release publish passed with zero warnings/err
 The current source exposes no online initiation/reconciliation, Paymob webhook or payment-return route. Old provider settings cannot enable these features. No payment-related schema/migration/data changes were made.
 
 [Final acceptance](FINAL-ACCEPTANCE.md) records the approved emulation scope and all completed tasks. [Physical-device limitations](EXTERNAL-ACCEPTANCE.md) remain explicit. Public deployment is optional and requires approval; none was created. Prefer an isolated staging database and separate test staff accounts.
+
+
+## Café frontend refresh —30 October2026
+
+The user approved frontend styling and simple imagery only, superseding the broader account/profile request. Feature006 adds a photographic Café homepage, about section and consistent public menu/header/footer. No registration/profile/address or database feature was added. Debug/Release builds and22 visual/navigation/privacy/cart checks passed; see specs/006-customer-cafe-portal/validation.md. The original164 active tasks remain complete; the frontend has6 additional tasks, with delivery status tracked separately in its tasks.md.

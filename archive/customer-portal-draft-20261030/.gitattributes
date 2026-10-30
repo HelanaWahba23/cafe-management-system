@@ -1,0 +1,2 @@
+# Preserve superseded draft bytes.
+* -text whitespace=-blank-at-eof,cr-at-eol

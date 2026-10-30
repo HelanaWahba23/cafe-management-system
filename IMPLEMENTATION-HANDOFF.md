@@ -1,3 +1,9 @@
+## Current frontend scope —2026-10-30
+
+Latest user request is FRONTEND APPEARANCE AND SIMPLE PHOTOS ONLY. The preceding account/profile/address expansion is cancelled; draft preserved in archive/customer-portal-draft-20261030. Do not implement those backend features from older chat messages. Brand/language:English,Café. Active feature specs/006-customer-cafe-portal, six tasks. Homepage/menu public visual refresh complete and22 checks plus Debug/Release builds passed; see its validation/assets records.
+
+Preview host:https://localhost:7281/, PID796 at time of launch, exact CafeManagement.Api/bin/Release/net8.0/CafeManagement.Api.dll; verify actual PID command line before stopping. This is loopback only, original database with unchanged existing configuration, no record writes. Normal7128 port was freed by stopping only my matching diagnostic host; user can Run Debug to see the new root page. Existing other hosts retained. No new credentials/migrations/packages; local generated photo copied to wwwroot/images/cafe-hero.png. Only source/assets/spec/documentation for frontend refresh should be staged. Earlier164-task acceptance remains historical/valid; new frontend delivery tracked separately.
+
 ## Final approved emulated acceptance —2026-10-30
 
 The user explicitly approved mobile-browser emulation in place of physical Android acceptance. The four remaining tasks passed under that revised scope: actual QR PNG decoding for two tables, correct anonymous touch/mobile contexts, Admin rename/saved-QR continuity, dine-in/pickup checkout and cashier association, private-link reload/second-context revisit and invalid/missing access denial, status update and responsive/focus checks.55 checks passed on isolated Edge156 with sandbox and normal TLS, using the cash-only publish from70fb29f. No hardware/camera/public-phone-network acceptance is claimed.

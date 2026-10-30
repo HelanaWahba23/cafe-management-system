@@ -1,9 +1,23 @@
 @inherits LayoutComponentBase
 
-<header class="border-bottom">
-    <div class="container py-3 d-flex flex-wrap align-items-center gap-3">
-        <span class="fw-bold">Cafe menu</span>
-        <a href="/menu/pickup" data-enhance-nav="false">Order for pickup</a>
-    </div>
-</header>
-<main class="container py-4">@Body</main>
+<div class="cafe-site">
+    <header class="cafe-header">
+        <div class="container cafe-navbar">
+            <a href="/" class="cafe-brand" aria-label="Café home" data-enhance-nav="false"><span class="cafe-brand-mark" aria-hidden="true">c.</span><span>Café<span class="cafe-brand-caption">a little everyday escape</span></span></a>
+            <nav class="cafe-nav" aria-label="Main navigation">
+                <a href="/" data-enhance-nav="false">Home</a>
+                <a href="/menu/pickup" data-enhance-nav="false">Menu</a>
+                <a href="/#about" data-enhance-nav="false">About us</a>
+            </nav>
+            <a class="btn cafe-order-link" href="/menu/pickup" data-enhance-nav="false">Order for pickup <span aria-hidden="true">↗</span></a>
+        </div>
+    </header>
+    <main id="main-content" class="container cafe-main">@Body</main>
+    <footer class="cafe-footer">
+        <div class="container cafe-footer-inner">
+            <a class="cafe-footer-brand" href="/" data-enhance-nav="false">Café<span>Good coffee. Simple pleasures.</span></a>
+            <p>A little pause in your day.</p>
+            <a href="/account/login" data-enhance-nav="false">Staff access <span aria-hidden="true">↗</span></a>
+        </div>
+    </footer>
+</div>

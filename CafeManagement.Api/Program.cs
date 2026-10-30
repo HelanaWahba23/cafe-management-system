@@ -203,7 +203,6 @@ app.UseRateLimiter();
 app.UseAuthorization();
 app.UseAntiforgery();
 
-app.MapGet("/", () => Results.Redirect("/menu/pickup"));
 app.MapControllers();
 app.MapRazorPages();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();

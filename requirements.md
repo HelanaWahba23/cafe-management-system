@@ -57,3 +57,7 @@ The user approved removing Paymob through Spec Kit because account setup is unav
 ## Approved acceptance revision —2026-10-30
 
 The user explicitly approved mobile browser emulation and corresponding Spec Kit acceptance updates in place of physical-device testing. Remaining T051/T056 (Feature001) and T059/T063 (Feature002) can complete only after actual automated QR/rename/dine-in/pickup/private-tracking checks and final coverage review. Do not claim real Android/camera/network testing. Preserve existing records and avoid public exposure.
+
+## Approved frontend-only refresh —2026-10-30
+
+The user confirmed English Café branding and then explicitly narrowed the request to frontend appearance with simple photos. Add a café homepage, Home/Menu/About navigation and public menu visual polish only. No customer registration/profile/address/account history, new database entities, delivery or online payment is part of this change. Preserve all current guest/staff/order/cash behavior. Superseded broader draft is archived; Feature006 governs this six-task frontend addition.

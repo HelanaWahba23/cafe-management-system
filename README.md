@@ -74,3 +74,5 @@ The current source exposes no online initiation/reconciliation, Paymob webhook o
 ## Café frontend refresh —30 October2026
 
 The user approved frontend styling and simple imagery only, superseding the broader account/profile request. Feature006 adds a photographic Café homepage, about section and consistent public menu/header/footer. No registration/profile/address or database feature was added. Debug/Release builds and22 visual/navigation/privacy/cart checks passed; see specs/006-customer-cafe-portal/validation.md. The original164 active tasks remain complete; the frontend has6 additional tasks, with delivery status tracked separately in its tasks.md.
+
+Frontend delivery:6/6 tasks complete; source commit0dbf97f pushed. Combined active tasks170/170, with5 historical Paymob tasks removed. No customer account/profile/backend expansion was implemented.

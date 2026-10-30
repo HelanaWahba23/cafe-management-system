@@ -92,3 +92,6 @@ PAYMENTS-ACCESS.md records official eligibility findings and legitimate alternat
 ## Customer entry correction —2026-10-30
 
 User requested a customer-facing first impression. All three launch profiles now open menu/pickup instead of Swagger, and GET / redirects to /menu/pickup. Swagger remains Development-only. Release build passed with zero warnings/errors; all launch-profile values and three read-only trusted-HTTPS checks passed on isolated7279:302 root redirect, anonymous pickup200 with correct page, Development Swagger200. The exact owned test host was stopped. No database/auth/provider changes, public deployment or new acceptance requirement; original task disposition remains164 complete plus5 removed.
+
+
+Delivered source/assets/specification commit0dbf97f pushed successfully to origin/master. T006 is now complete after actual push; frontend tasks6/6. Combined active tasks170/170 (original164 plus6 frontend); five original Paymob tasks remain removed, never passed. Preview remains loopback7281; normal Debug Run uses the new root homepage, with7128 left free. No database/auth change or new account feature.

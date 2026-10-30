@@ -11,3 +11,6 @@ Evidence is ignored under artifacts/cafe-frontend:result.json,home-390.png,home-
 No application error was reproduced in normal configuration during the preceding startup investigation: direct original database query and the exact Debug assembly both loaded8 categories/4 available products, and actual7128 browser Add to cart passed. The previous failing Visual Studio session ended before its exact cause could be established; no speculative database/configuration change was made.
 
 Read-only Spec Kit analysis:6FR/4SC mapped to T001–T006; no critical/high gaps, unresolved scope markers or constitution deviation. All16 quality checklist items pass. Prior164 original active tasks remain accepted under their recorded scope; this is a six-task frontend addition. T006 completes only after verified commit/push.
+
+
+Delivered source/assets/specification commit0dbf97f pushed successfully to origin/master. T006 is now complete after actual push; frontend tasks6/6. Combined active tasks170/170 (original164 plus6 frontend); five original Paymob tasks remain removed, never passed. Preview remains loopback7281; normal Debug Run uses the new root homepage, with7128 left free. No database/auth change or new account feature.

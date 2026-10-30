@@ -125,3 +125,9 @@ Still required: real-phone QR/rescan/pickup/private-link checks on an approved r
 - [ ] Commit the prepared provider source only after genuine sandbox acceptance. Local non-success HMAC vectors and builds do not satisfy this gate.
 
 Follow each feature's `implementation-handoff.md`, `tasks.md` and validation evidence. Preserve all local work. Never stage every file blindly: `Program.cs`, `PaymentsController.cs` and `PaymentPanel.razor` contain additional unverified Paymob changes beyond the pushed cash versions. Git history preserves the validated milestones; no force-push or database reset is needed.
+
+### Verified resume — 30 October 2026
+
+Starting local and remote master both verified at `d94c845`. Acceptance remains **159/169**; all ten external-gated task markers stay pending. All seven required Paymob User Secrets keys are absent, confirmed without printing values. The prepared inquiry client now follows official JSON authentication; both selector paths passed intercepted HTTP checks, and the changed full working tree passed Release build with zero warnings/errors. Provider work remains local pending genuine acceptance.
+
+Follow [complete external setup and acceptance steps](EXTERNAL-ACCEPTANCE.md). Required operator inputs are local Paymob Egypt test credentials/integration, approval for temporary public HTTPS (or an approved staging origin), the selected test database, a real Android phone/operator, and provider-supported failure/terminal recovery guidance. No tunnel, firewall, certificate trust, host or database changes were made.

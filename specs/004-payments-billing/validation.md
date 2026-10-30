@@ -29,3 +29,9 @@ Only validated cash/schema/status and cash UI versions are eligible for the next
 ## Exact staged cash milestone
 
 Exported Git index to ignored artifacts/cash-index-review without changing the working tree. Its Release restore/build/publish passed with zero warnings/errors, independently of prepared Paymob files. The staged publish on7272 passed12 focused HTTP checks, including protected cash/private status and confirmed404 for unverified online initiation/webhook routes. Cash-only versions of PaymentPanel/PaymentsController/Program are staged; online additions remain local and preserved. This validates the actual commit contents rather than relying on a working tree with extra files.
+
+## Resume verification — 30 October 2026
+
+Verified local HEAD and remote master at `d94c845`. Re-read exact remaining requirements and superseding handoff. Project-specific User Secrets presence-only check confirmed all seven Paymob keys absent; no values were exposed. Official provider protocol review found and corrected inquiry authentication to include JSON `auth_token` for both saved-order and merchant-reference branches. Four intercepted HTTP requests passed; no network/provider/database operation occurred. Complete working-tree Release build passed with zero warnings/errors after the correction.
+
+See [external acceptance setup](../../EXTERNAL-ACCEPTANCE.md) for credential entry, approval-gated temporary HTTPS, Android steps, provider failure guidance and per-task evidence. All existing unchecked markers remain pending: no phone or genuine Paymob acceptance was performed. Preserve the seven unfinished provider paths uncommitted, including the locally validated inquiry correction, until provider acceptance. No hosts, database records, credentials, firewall rules or certificate trust were changed.

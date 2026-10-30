@@ -967,3 +967,9 @@ unrelated machine-wide changes. The documented .NET8 support-lifecycle risk rema
 Only `tasks.md` is generated now; no source, migrations, packages, accounts, databases, validation
 outputs or other planning artifacts are created/modified by this command. Proceeding to execution
 requires user review. Suggested next review command is `$speckit-analyze`, not automatic implementation.
+
+## Resume verification — 30 October 2026
+
+Verified local HEAD and remote master at `d94c845`. Re-read exact remaining requirements and superseding handoff. Project-specific User Secrets presence-only check confirmed all seven Paymob keys absent; no values were exposed. Official provider protocol review found and corrected inquiry authentication to include JSON `auth_token` for both saved-order and merchant-reference branches. Four intercepted HTTP requests passed; no network/provider/database operation occurred. Complete working-tree Release build passed with zero warnings/errors after the correction.
+
+See [external acceptance setup](../../EXTERNAL-ACCEPTANCE.md) for credential entry, approval-gated temporary HTTPS, Android steps, provider failure guidance and per-task evidence. All existing unchecked markers remain pending: no phone or genuine Paymob acceptance was performed. Preserve the seven unfinished provider paths uncommitted, including the locally validated inquiry correction, until provider acceptance. No hosts, database records, credentials, firewall rules or certificate trust were changed.

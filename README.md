@@ -114,4 +114,14 @@ Still required: real-phone QR/rescan/pickup/private-link checks on an approved r
 
 ## Resume safely
 
+### Final setup checklist — 30 October 2026
+
+- [x] Read the latest handoff, remaining task markers and all uncommitted provider changes; preserve the prepared integration locally.
+- [x] Retain completed cash/POS/reports/customer-navigation validation without rerunning successful functional checks.
+- [x] Final full-working-tree Debug and Release builds: zero warnings/errors. Release publish succeeded to the new, inactive `artifacts/finalization-20261030-publish` directory. This includes unaccepted provider code and is not a deployment or sandbox acceptance.
+- [x] Existing database backup, additive migrations and account/QR preservation are recorded in the handoff; no database changes were needed for this checkpoint.
+- [ ] Feature 001 T051/T056 and Feature 002 T059/T063: real Android phone, approved reachable trusted HTTPS origin, QR entry/rescan after table rename, pickup without table and private-link journeys; then final acceptance review.
+- [ ] Feature 004 T009–T014: actual Paymob Egypt test credentials/integration and approved public HTTPS callback/return origin; verify protocol/response shapes, hosted success/failure, authenticated inquiry, signed callbacks, duplicate/out-of-order events, interrupted initiation and terminal/lost-link recovery, then full provider billing acceptance.
+- [ ] Commit the prepared provider source only after genuine sandbox acceptance. Local non-success HMAC vectors and builds do not satisfy this gate.
+
 Follow each feature's `implementation-handoff.md`, `tasks.md` and validation evidence. Preserve all local work. Never stage every file blindly: `Program.cs`, `PaymentsController.cs` and `PaymentPanel.razor` contain additional unverified Paymob changes beyond the pushed cash versions. Git history preserves the validated milestones; no force-push or database reset is needed.

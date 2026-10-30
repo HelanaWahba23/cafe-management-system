@@ -1,5 +1,13 @@
 # Cafe Management implementation handoff — 29 October 2026
 
+## Finalization checkpoint — 30 October 2026
+
+Read the latest handoff, all remaining task markers and all seven local provider paths (three modified files plus four untracked files). No additional independent implementation task remains outside the recorded external gates. Preserve the provider changes locally until actual sandbox acceptance; task counts and unchecked acceptance markers remain unchanged.
+
+Final full-working-tree Debug and Release builds both passed with zero warnings/errors using existing restored dependencies. Release publish with `--no-build --no-restore` succeeded to a new inactive directory, `artifacts/finalization-20261030-publish`. It includes prepared provider code; compilation does not establish provider acceptance. No hosts were stopped/replaced, database touched, successful functional validation repeated, credentials exposed or network configuration changed. README now contains the explicit final setup checklist.
+
+The finalization commit changes documentation only. The validated application code milestone remains `18d6a67`; the previous documentation checkpoint is `49f43a4`. Initial remote verification failed because this execution environment could not connect to GitHub; verify push/remote state after the finalization commit rather than assuming it was published.
+
 Latest code milestones on origin/master: customer menus/navigation `18d6a67`, dashboard/theme `8657b2e`, cash payments `0b9038c`, POS `3a30dea`. All validated code is pushed. Preserve the remaining local provider work.
 
 | Feature | Accepted tasks | Remaining gate |

@@ -6,5 +6,7 @@ public enum OrderStatus
     Preparing,
     Ready,
     Completed,
-    Rejected
+    Rejected,
+    Accepted,
+    OutForDelivery
 }

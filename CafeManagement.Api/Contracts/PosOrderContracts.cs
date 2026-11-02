@@ -8,7 +8,7 @@ public sealed record PosOrderPage(PosOrderSummary[] Items, int TotalCount, int P
 public sealed record PosOrderDetail(long Id, Guid Reference, string Origin, string OrderType,
     string? TableLabel, string? CustomerName, string? CustomerPhone, string Status,
     string? RejectionReason, string Total, string Currency, DateTime CreatedAtUtc,
-    string RowVersion, OrderTrackingItem[] Items);
+    string RowVersion, OrderTrackingItem[] Items) { public string? DeliveryAddress { get; init; } }
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed class PosStatusInput

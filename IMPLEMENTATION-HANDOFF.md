@@ -1,3 +1,25 @@
+## Local delivery complete —latest resume2026-10-30
+
+User explicitly requested prompt local completion and stated no external deployment or push is required. Actual saved state rechecked:65-check browser acceptance PASS, exact fixture cleanup/preservation PASS, final Debug/Release/published DLLs exist. Earlier10 final HTTPS checks and final published visual/cart smoke passed. No successful suite was unnecessarily rerun.
+
+Feature007 tasks8/8 complete under the local-delivery criterion. All source/migration/assets/Spec Kit/run instructions are saved in the current checkout. They are UNCOMMITTED and UNPUSHED; last Git commit remains9b7aa6a (earlier frontend milestone). An attempted Git staging action was not executed because automatic approval review could not complete after its usage limit; this was a review-service failure, not an unsafe-action finding. Do not claim Git publication or bypass approval. User's latest instruction permits local delivery without Git write.
+
+Run from the existing checkout: dotnet run --project CafeManagement.Api --launch-profile https, then https://localhost:7128/. Visual Studio: startup CafeManagement.Api, https profile, Run. The original local SQL database has already received the verified additive migration and curated menu; existing User Secrets/staff accounts/table QR identifiers are preserved. New customer creates their own account via Sign up. Customer profile, cash-on-delivery/pickup/table ordering and owner tracking were genuinely tested. No online payment, courier/GPS integration, physical Android or email delivery is claimed.
+
+The prior7283 preview was not reachable in the resume check; do not advertise it as currently live. Saved project/build/publish are the deliverable. Use normal Run on7128; do not reset/migrate/seed again on this existing environment. Earlier preview PID metadata is historical and must be reverified before any process operation.
+
+## CURRENT —Full restaurant/customer site,2026-10-30
+
+Latest user authorization supersedes frontend-only/no-delivery: complete English restaurant UI/menu, customer accounts/profile/address/history, delivery(cash-on-delivery)/pickup/table QR, cashier-driven progress. Feature007 in specs/007-restaurant-customer-site is authoritative. No provider or public hosting prerequisite.
+
+Implemented and verified65 browser checks plus10 final publish checks; Debug/Release/publish zero warnings/errors. Reviewed additive migration applied to copy first, original only after fresh verified COPY_ONLY/CHECKSUM backup. Preexisting old-column projections matched across15 original/copy tables. Curated6-category/13-product menu added; previous diagnostic rows/prices retained, public visibility changed intentionally.2 owned test accounts/4 orders/1 receipt cleaned only on validation copy; original test-write-free.
+
+Run: Visual Studio https profile or dotnet run --project CafeManagement.Api --launch-profile https; roothttps://localhost:7128/. Customer/customer/register,/customer/login,/customer/profile,/customer/orders; staff/account/login,/pos/orders. RUN-RESTAURANT.md is current setup guide. Original local SQL/User Secrets/accounts/QRs preserved. New accounts must be registered by user; no demo credentials published.
+
+Final published previewhttps://localhost:7283/, recorded PID8604, exact artifacts/restaurant-final-publish/CafeManagement.Api.dll; verify PID/path/port before stopping.7282 validation host stopped. Normal7128 port not taken by this preview. Ignored evidence/baselines/backup path/fixtures under artifacts/restaurant-final. No broad cleanup or obsolete fixture helper replay.
+
+Remaining publication task:T008 only, mark complete after actual verified source commit/push. Earlier accepted170-task baseline is historical; eight new Feature007 tasks cover this extension. No email provider/confirmation/recovery sending, courier/GPS, physical Android or live/online payment has been claimed. No unrelated source reset.
+
 ## Current frontend scope —2026-10-30
 
 Latest user request is FRONTEND APPEARANCE AND SIMPLE PHOTOS ONLY. The preceding account/profile/address expansion is cancelled; draft preserved in archive/customer-portal-draft-20261030. Do not implement those backend features from older chat messages. Brand/language:English,Café. Active feature specs/006-customer-cafe-portal, six tasks. Homepage/menu public visual refresh complete and22 checks plus Debug/Release builds passed; see its validation/assets records.
@@ -95,3 +117,12 @@ User requested a customer-facing first impression. All three launch profiles now
 
 
 Delivered source/assets/specification commit0dbf97f pushed successfully to origin/master. T006 is now complete after actual push; frontend tasks6/6. Combined active tasks170/170 (original164 plus6 frontend); five original Paymob tasks remain removed, never passed. Preview remains loopback7281; normal Debug Run uses the new root homepage, with7128 left free. No database/auth change or new account feature.
+
+## User-requested menu additions —2026-10-30
+
+Added14 menu items across the existing6 restaurant categories: Double Cheeseburger225,BBQ Beef Burger215,BBQ Chicken Pizza195,Four Cheese Pizza190,Chicken Shawarma Plate195,Kofta Plate210,Caesar Salad125,Crispy Onion Rings65,Espresso40,Cappuccino65,Hot Chocolate70,Chocolate Milkshake85,Tiramisu95,Apple Pie85 (EGP portfolio prices).
+
+INSERT-only expansion applied to validation copy first and original second. Both reported14 additions, all21 previous product row fingerprints unchanged, repeated execution inserted0 duplicates. PublicMenuService returned27 available products in6 categories for both databases. No prior names/prices/availability, categories, accounts, QR identifiers, orders or schema were changed. Full optional seed now includes the additions; scripts/expand-restaurant-menu.sql is the safe idempotent insert-only existing-database extension. This is a data/script change and does not require a new application build or replay of prior65 functional tests. All prior uncommitted Feature007 work remains saved; no Git publication is claimed.
+# Public repository setup — 2026-11-02
+
+Fresh installations now use `scripts/setup-local.ps1`, a private Git-ignored local settings file, reviewed migrations, an embedded demo menu seed, and a random per-installation Admin password. README and RUN-RESTAURANT describe prerequisites, fresh setup, staff login, manual configuration, and port troubleshooting. GitHub Actions checks Release build, migration consistency, and publishing. See `specs/007-restaurant-customer-site/publication-validation.md` for isolated fresh-database validation. Existing developer credentials/database contents are not distributed.

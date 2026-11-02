@@ -12,6 +12,13 @@ using System.Globalization;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+// Local development fallback for IDE sessions that cannot resolve the user secrets store.
+// Existing environment variables and User Secrets keep precedence when configured.
+if (builder.Environment.IsDevelopment() &&
+    string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("CafeDatabase")))
+{
+    builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
+}
 
 // Add services to the container.
 
@@ -67,6 +74,7 @@ builder.Services.AddScoped<TableService>();
 builder.Services.AddScoped<TableQrService>();
 builder.Services.AddScoped<PublicMenuService>();
 builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<PosOrderService>();
 builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<AdminReportService>();
@@ -99,7 +107,9 @@ builder.Services.ConfigureApplicationCookie(options =>
         if (context.Request.Path.StartsWithSegments("/api"))
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
         else
-            context.Response.Redirect(context.RedirectUri);
+            context.Response.Redirect(context.Request.Path.StartsWithSegments("/customer")
+                ? "/customer/login?ReturnUrl=" + Uri.EscapeDataString(context.Request.Path + context.Request.QueryString)
+                : context.RedirectUri);
         return Task.CompletedTask;
     };
     options.Events.OnRedirectToAccessDenied = context =>
@@ -113,6 +123,31 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 var app = builder.Build();
+
+// Explicit local setup command; ordinary web startup never provisions data.
+if (args.Contains("--seed-demo-menu", StringComparer.Ordinal))
+{
+    if (!app.Environment.IsDevelopment())
+    {
+        Console.Error.WriteLine("Demo seeding is available only in Development.");
+        Environment.ExitCode = 1;
+    }
+    else
+    {
+        try
+        {
+            await using var scope = app.Services.CreateAsyncScope();
+            await DemoMenuSeeder.SeedAsync(scope.ServiceProvider.GetRequiredService<CafeDbContext>());
+        }
+        catch
+        {
+            Console.Error.WriteLine("Demo seeding failed. Check the local database configuration and apply migrations first.");
+            Environment.ExitCode = 1;
+        }
+    }
+    await app.DisposeAsync();
+    return;
+}
 
 // Operator-only command: never run provisioning during ordinary web startup.
 if (args.Contains("--bootstrap-user", StringComparer.Ordinal))
@@ -143,13 +178,14 @@ app.Use(async (context, next) =>
     var path = context.Request.Path;
     var documentPath = path.Value?.TrimEnd('/');
     var privateDocument = path.StartsWithSegments("/menu/t")
+        || path.StartsWithSegments("/customer")
         || string.Equals(documentPath, "/menu/pickup", StringComparison.OrdinalIgnoreCase)
         || string.Equals(documentPath, "/orders/track", StringComparison.OrdinalIgnoreCase)
         || string.Equals(documentPath, "/admin/dashboard", StringComparison.OrdinalIgnoreCase)
         || string.Equals(documentPath, "/payments/return", StringComparison.OrdinalIgnoreCase);
     if (privateDocument || path.StartsWithSegments("/api/orders")
         || path.StartsWithSegments("/pos") || path.StartsWithSegments("/api/pos") || path.StartsWithSegments("/api/payments")
-        || path.StartsWithSegments("/api/admin/reports"))
+        || path.StartsWithSegments("/api/admin/reports") || path.StartsWithSegments("/api/customer"))
     {
         // OnStarting also preserves these headers when downstream error handling clears a response.
         context.Response.OnStarting(() =>

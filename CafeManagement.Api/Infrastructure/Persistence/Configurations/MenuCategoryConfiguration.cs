@@ -13,5 +13,6 @@ public sealed class MenuCategoryConfiguration : IEntityTypeConfiguration<MenuCat
         builder.HasKey(category => category.Id);
         builder.Property(category => category.Id).UseIdentityColumn();
         builder.Property(category => category.Name).HasMaxLength(120).IsRequired();
+        builder.Property(category => category.IsVisible).HasDefaultValue(true);
     }
 }

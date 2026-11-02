@@ -13,6 +13,7 @@ public sealed class CafeDbContext(DbContextOptions<CafeDbContext> options) : Ide
     public DbSet<OrderLine> OrderLines => Set<OrderLine>();
     public DbSet<PaymentAttempt> PaymentAttempts => Set<PaymentAttempt>();
     public DbSet<PaymentSettlement> PaymentSettlements => Set<PaymentSettlement>();
+    public DbSet<CustomerProfile> CustomerProfiles => Set<CustomerProfile>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

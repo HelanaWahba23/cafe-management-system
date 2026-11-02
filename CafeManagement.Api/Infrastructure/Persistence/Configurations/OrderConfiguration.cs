@@ -10,9 +10,10 @@ public sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
     {
         builder.ToTable("Orders", table =>
         {
-            table.HasCheckConstraint("CK_Orders_Type", "[Type] IN (N'DineIn', N'Pickup')");
+            table.HasCheckConstraint("CK_Orders_Type", "[Type] IN (N'DineIn', N'Pickup', N'Delivery')");
             table.HasCheckConstraint("CK_Orders_Status",
-                "[Status] IN (N'Submitted', N'Preparing', N'Ready', N'Completed', N'Rejected')");
+                "[Status] IN (N'Submitted', N'Accepted', N'Preparing', N'Ready', N'OutForDelivery', N'Completed', N'Rejected')");
+            table.HasCheckConstraint("CK_Orders_DeliveryAddress", "([Type] = N'Delivery' AND [DeliveryAddress] IS NOT NULL AND LEN(LTRIM(RTRIM([DeliveryAddress]))) BETWEEN 8 AND 500) OR ([Type] <> N'Delivery' AND [DeliveryAddress] IS NULL)");
             table.HasCheckConstraint("CK_Orders_Currency", "[Currency] = 'EGP'");
             table.HasCheckConstraint("CK_Orders_Total_Positive", "[Total] > 0");
             table.HasCheckConstraint("CK_Orders_Origin", "[Origin] IN (N'Customer', N'Counter')");
@@ -25,7 +26,7 @@ public sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
                 "([Origin] = N'Counter' AND [CustomerPhone] IS NULL) OR ([CustomerPhone] IS NOT NULL AND LEN(LTRIM(RTRIM([CustomerPhone]))) > 0)");
             table.HasCheckConstraint("CK_Orders_TableContext",
                 "([Type] = N'DineIn' AND [TableId] IS NOT NULL AND [TableLabel] IS NOT NULL AND LEN(LTRIM(RTRIM([TableLabel]))) > 0) " +
-                "OR ([Type] = N'Pickup' AND [TableId] IS NULL AND [TableLabel] IS NULL)");
+                "OR ([Type] IN (N'Pickup', N'Delivery') AND [TableId] IS NULL AND [TableLabel] IS NULL)");
             table.HasCheckConstraint("CK_Orders_RejectionReason",
                 "([Status] = N'Rejected' AND [RejectionReason] IS NOT NULL AND LEN(LTRIM(RTRIM([RejectionReason]))) > 0) " +
                 "OR ([Status] <> N'Rejected' AND [RejectionReason] IS NULL)");
@@ -40,6 +41,9 @@ public sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(order => order.TableLabel).HasMaxLength(120);
         builder.Property(order => order.CustomerName).HasMaxLength(120);
         builder.Property(order => order.CustomerPhone).HasMaxLength(40);
+        builder.Property(order => order.DeliveryAddress).HasMaxLength(500);
+        builder.HasOne<Microsoft.AspNetCore.Identity.IdentityUser>().WithMany()
+            .HasForeignKey(order => order.CustomerUserId).OnDelete(DeleteBehavior.Restrict);
         builder.Property(order => order.Origin).HasConversion<string>().HasMaxLength(16).HasDefaultValue(OrderOrigin.Customer).IsRequired();
         builder.HasOne<Microsoft.AspNetCore.Identity.IdentityUser>().WithMany()
             .HasForeignKey(order => order.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);

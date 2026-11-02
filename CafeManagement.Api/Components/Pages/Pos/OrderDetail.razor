@@ -19,7 +19,8 @@
     <div class="row g-4">
         <section class="col-lg-5"><div class="card card-body h-100">
             <h2 class="h4">@order.Status</h2><p class="text-break">@order.Reference</p>
-            <p>@(order.OrderType == "DineIn" ? $"Dine-in · Table {order.TableLabel}" : order.Origin == "Counter" ? "Takeaway" : "Online pickup") · @order.Origin</p>
+            <p>@(order.OrderType == "DineIn" ? $"Dine-in · Table {order.TableLabel}" : order.OrderType == "Delivery" ? "Delivery · Cash on delivery" : order.Origin == "Counter" ? "Takeaway" : "Online pickup") · @order.Origin</p>
+            @if (order.DeliveryAddress is not null) { <p class="text-break"><strong>Delivery address:</strong> @order.DeliveryAddress</p> }
             <p class="text-secondary">@order.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</p>
             @if (order.CustomerName is not null) { <p class="text-break">Name: @order.CustomerName</p> }
             @if (order.CustomerPhone is not null) { <p class="text-break">Phone: @order.CustomerPhone</p> }
@@ -27,7 +28,7 @@
             <form @onsubmit="NoSubmit" @onsubmit:preventDefault="true" data-order-write="true">
             <fieldset disabled="@busy"><legend class="h5">Fulfillment</legend>
                 @if (NextStatus is not null) { <button type="button" class="btn btn-primary mb-3" @onclick="() => Change(NextStatus!)">Mark @NextStatus</button> }
-                @if (order.Status == "Submitted")
+                @if (order.Status is "Submitted" or "Accepted")
                 {
                     <div><label class="form-label" for="reject-reason">Reason for rejection</label><textarea class="form-control" id="reject-reason" maxlength="500" @bind="reason"></textarea><button type="button" class="btn btn-outline-danger mt-2" @onclick="Reject">Reject order</button></div>
                 }
@@ -49,7 +50,7 @@
     private string reason = "";
     private bool busy;
     private int generation;
-    private string? NextStatus => order?.Status switch { "Submitted" => "Preparing", "Preparing" => "Ready", "Ready" => "Completed", _ => null };
+    private string? NextStatus => order?.Status switch { "Submitted" => "Accepted", "Accepted" => "Preparing", "Preparing" => "Ready", "Ready" => order.OrderType == "Delivery" ? "OutForDelivery" : "Completed", "OutForDelivery" => "Completed", _ => null };
     protected override Task OnParametersSetAsync() => LoadCore();
     private void NoSubmit() { }
     private Task Reject() => Change("Rejected");

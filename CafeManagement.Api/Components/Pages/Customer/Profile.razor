@@ -1,0 +1,13 @@
+@page "/customer/profile"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@layout PublicLayout
+@using CafeManagement.Api.Application
+@using CafeManagement.Api.Contracts
+@inject CustomerService Customers
+@inject AuthenticationStateProvider Authentication
+<PageTitle>My profile | Café</PageTitle>
+<section class="customer-profile"><p class="eyebrow">Your Café account</p><h1>Make yourself at home.</h1><a href="/customer/orders">My orders</a>
+@if(message is not null){<p class="alert alert-info" role="status">@message</p>}
+@if(loaded){@if(model is null){<p>Use a customer account to view your profile. <a href="/customer/login">Customer login</a></p>}else{<EditForm Model="model" OnValidSubmit="Save" FormName="customer-profile"><DataAnnotationsValidator/><ValidationSummary/><fieldset disabled="@busy"><div class="mb-3"><label for="profile-name">Full name</label><InputText id="profile-name" class="form-control" @bind-Value="model.DisplayName"/></div><div class="mb-3"><label for="profile-phone">Phone</label><InputText id="profile-phone" class="form-control" @bind-Value="model.Phone"/></div><div class="mb-3"><label for="profile-address">Saved delivery address</label><InputTextArea id="profile-address" class="form-control" @bind-Value="model.Address"/><small>Confirm this address at delivery checkout. Pickup and table orders do not need it.</small></div><button class="btn btn-primary">Save profile</button><a href="/customer/signout" class="btn btn-outline-secondary">Sign out</a></fieldset></EditForm>}}else{<p>Loading your details…</p>}</section>
+@code{CustomerProfileInput? model;bool loaded,busy;string? message;protected override async Task OnInitializedAsync(){await Load();}async Task Load(){var p=await Customers.ProfileAsync((await Authentication.GetAuthenticationStateAsync()).User);model=p is null?null:new(){DisplayName=p.DisplayName,Phone=p.Phone,Address=p.Address,RowVersion=Convert.ToBase64String(p.RowVersion)};loaded=true;}async Task Save(){if(busy||model is null)return;busy=true;try{var ok=await Customers.SaveProfileAsync((await Authentication.GetAuthenticationStateAsync()).User,model);message=ok?"Your details have been saved.":"Unable to save. Check your details and reload before trying again.";if(ok)await Load();}finally{busy=false;}}}

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CafeManagement.Api.Application;
 
-public sealed class PublicMenuService(IDbContextFactory<CafeDbContext> factory)
+public sealed class PublicMenuService(IDbContextFactory<CafeDbContext> factory, ILogger<PublicMenuService> logger)
 {
     public async Task<(PublicMenuDetails? Value, OperationError? Error)> GetAsync(string? publicCode,
         CancellationToken cancellationToken = default)
@@ -24,8 +24,9 @@ public sealed class PublicMenuService(IDbContextFactory<CafeDbContext> factory)
             return (new PublicMenuDetails(table, "EGP", categories), null);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
-        catch (Exception)
+        catch (Exception exception)
         {
+            logger.LogError(exception, "Unable to load the table menu.");
             return (null, new OperationError(OperationErrorKind.Unexpected, "Unable to load the menu. Please try again."));
         }
     }
@@ -39,15 +40,16 @@ public sealed class PublicMenuService(IDbContextFactory<CafeDbContext> factory)
             return (new PickupMenuDetails("EGP", await CategoriesAsync(db, cancellationToken)), null);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
-        catch (Exception)
+        catch (Exception exception)
         {
+            logger.LogError(exception, "Unable to load the pickup menu.");
             return (null, new OperationError(OperationErrorKind.Unexpected, "Unable to load the menu. Please try again."));
         }
     }
 
     // Shared available-only projection, retaining explicit empty categories and stable ordering.
     private static Task<PublicMenuCategory[]> CategoriesAsync(CafeDbContext db, CancellationToken cancellationToken) =>
-        db.MenuCategories.AsNoTracking().OrderBy(c => c.Id)
+        db.MenuCategories.AsNoTracking().Where(c => c.IsVisible).OrderBy(c => c.Id)
             .Select(c => new PublicMenuCategory(c.Id, c.Name,
                 c.Products.Where(p => p.IsAvailable).OrderBy(p => p.Id)
                     .Select(p => new PublicMenuProduct(p.Id, p.Name, p.Price)).ToArray()))

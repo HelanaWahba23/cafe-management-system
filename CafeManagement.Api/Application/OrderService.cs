@@ -19,8 +19,11 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
     internal Task<OrderPlacementOutcome> PlaceCounterAsync(string? attempt, OrderPlacementInput? input,
         string creator, CancellationToken ct) => PlaceCoreAsync(attempt, input, creator, ct);
 
+    internal Task<OrderPlacementOutcome> PlaceCustomerAsync(string? capability, OrderPlacementInput input,
+        string customerId, CancellationToken ct) => PlaceCoreAsync(capability, input, null, ct, customerId);
+
     private async Task<OrderPlacementOutcome> PlaceCoreAsync(string? capability, OrderPlacementInput? input,
-        string? creator, CancellationToken cancellationToken)
+        string? creator, CancellationToken cancellationToken, string? customerOwner = null)
     {
         var error = Prepare(capability, input?.Draft, out var draft, creator);
         if (error is not null) return new(null, error);
@@ -33,6 +36,7 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
             {
                 OrderType = draft!.Type.ToString(), TablePublicCode = draft.TablePublicCode,
                 CustomerName = draft.CustomerName, CustomerPhone = draft.CustomerPhone,
+                DeliveryAddress = draft.DeliveryAddress, AddressConfirmed = draft.Type == OrderType.Delivery,
                 Items = draft.Items.Select(i => new OrderDraftItem { ProductId = i.ProductId, Quantity = i.Quantity }).ToArray()
             },
             ReviewedPrices = prices
@@ -49,7 +53,8 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
             await using var db = await factory.CreateDbContextAsync(cancellationToken);
             await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken);
             var existing = await FindAsync(db, draft!.CapabilityHash, cancellationToken, creator);
-            if (existing is not null) return Replay(existing, draft.IntentHash);
+            if (existing is not null) return customerOwner is not null && existing.CustomerUserId != customerOwner
+                ? new(null, new OperationError(OperationErrorKind.Conflict, "This order belongs to a different order context.")) : Replay(existing, draft.IntentHash);
 
             // Table/product reads retain their locks only through this short local acceptance.
             var review = await ReviewCoreAsync(db, draft, cancellationToken);
@@ -67,6 +72,7 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
                 CapabilityHash = draft.CapabilityHash, IntentHash = draft.IntentHash, Type = draft.Type,
                 TableId = tableId, TableLabel = review.Value.Table?.Label,
                 Origin = creator is null ? OrderOrigin.Customer : OrderOrigin.Counter, CreatedByUserId = creator,
+                CustomerUserId = customerOwner, DeliveryAddress = draft.Type == OrderType.Delivery ? draft.DeliveryAddress : null,
                 CustomerName = string.IsNullOrEmpty(draft.CustomerName) ? null : draft.CustomerName,
                 CustomerPhone = string.IsNullOrEmpty(draft.CustomerPhone) ? null : draft.CustomerPhone,
                 Total = ReadMoney(review.Value.Total)
@@ -94,7 +100,8 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
             {
                 await using var recovery = await factory.CreateDbContextAsync(cancellationToken);
                 var winner = await FindAsync(recovery, draft!.CapabilityHash, cancellationToken, creator);
-                return winner is null ? Uncertain() : Replay(winner, draft.IntentHash);
+                return winner is null ? Uncertain() : customerOwner is not null && winner.CustomerUserId != customerOwner
+                    ? new(null, new OperationError(OperationErrorKind.Conflict, "This order belongs to a different order context.")) : Replay(winner, draft.IntentHash);
             }
             catch (Exception) { return Uncertain(); }
         }
@@ -140,10 +147,10 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
     private static OperationError MissingTracking() => new(OperationErrorKind.NotFound,
         "This private order could not be found. Check your private link.", "order_not_found");
     private static decimal ReadMoney(string value) => decimal.Parse(value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture);
-    private static OrderTracking Project(Order order) => new(order.Reference, order.Type.ToString(), order.TableLabel,
+    internal static OrderTracking Project(Order order) => new(order.Reference, order.Type.ToString(), order.TableLabel,
         order.Lines.OrderBy(line => line.ProductId).Select(line => new OrderTrackingItem(line.ProductName, line.Quantity,
             Money(line.UnitPrice), Money(line.LineTotal))).ToArray(), Money(order.Total), order.Status.ToString(),
-        order.RejectionReason, order.CreatedAtUtc);
+        order.RejectionReason, order.CreatedAtUtc) { DeliveryAddress = order.DeliveryAddress };
 
     public Task<(OrderReview? Value, OperationError? Error)> ReviewAsync(string? capability,
         OrderDraft? input, CancellationToken cancellationToken = default) => ReviewCoreEntryAsync(capability, input, null, cancellationToken);
@@ -187,7 +194,7 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
 
         var ids = draft!.Items.Select(item => item.ProductId).ToArray();
         var products = await db.Products.AsNoTracking().Where(p => ids.Contains(p.Id)).OrderBy(p => p.Id)
-            .Select(p => new { p.Id, p.Name, p.Price, p.IsAvailable }).ToArrayAsync(cancellationToken);
+            .Select(p => new { p.Id, p.Name, p.Price, IsAvailable = p.IsAvailable && p.Category.IsVisible }).ToArrayAsync(cancellationToken);
         if (products.Length != ids.Length)
             return (null, new OperationError(OperationErrorKind.NotFound,
                 "A selected product could not be found. Reload the menu.", "product_not_found"));
@@ -225,6 +232,7 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
         {
             OrderType = input.OrderType, TablePublicCode = input.TablePublicCode,
             CustomerName = input.CustomerName, CustomerPhone = input.CustomerPhone,
+            DeliveryAddress = input.DeliveryAddress?.Trim(), AddressConfirmed = input.AddressConfirmed,
             Items = input.Items?.Select(item => item is null ? null : new OrderDraftItem
                 { ProductId = item.ProductId, Quantity = item.Quantity }).ToArray()
         };
@@ -247,7 +255,7 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
             CryptographicOperations.ZeroMemory(counterBuffer.GetBuffer());
         }
         prepared = new PreparedDraft(type, snapshot.TablePublicCode, snapshot.CustomerName, snapshot.CustomerPhone,
-            items, capabilityHash!, HashIntent(type, snapshot.TablePublicCode, snapshot.CustomerName, snapshot.CustomerPhone, items));
+            items, capabilityHash!, HashIntent(type, snapshot.TablePublicCode, snapshot.CustomerName, snapshot.CustomerPhone, items, snapshot.DeliveryAddress), snapshot.DeliveryAddress);
         return null;
     }
 
@@ -269,7 +277,7 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
         return true;
     }
 
-    private static byte[] HashIntent(OrderType type, Guid? table, string name, string phone, DraftSelection[] items)
+    private static byte[] HashIntent(OrderType type, Guid? table, string name, string phone, DraftSelection[] items, string? address)
     {
         using var buffer = new MemoryStream();
         using (var writer = new BinaryWriter(buffer, Encoding.UTF8, leaveOpen: true))
@@ -281,6 +289,7 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
             writer.Write(table?.ToString("D") ?? string.Empty);
             writer.Write(name);
             writer.Write(phone);
+            if (type == OrderType.Delivery) writer.Write(address ?? string.Empty);
             writer.Write(items.Length);
             foreach (var item in items)
             {
@@ -300,5 +309,5 @@ public sealed class OrderService(IDbContextFactory<CafeDbContext> factory)
 
     private sealed record DraftSelection(int ProductId, int Quantity);
     private sealed record PreparedDraft(OrderType Type, Guid? TablePublicCode, string CustomerName, string CustomerPhone,
-        DraftSelection[] Items, byte[] CapabilityHash, byte[] IntentHash);
+        DraftSelection[] Items, byte[] CapabilityHash, byte[] IntentHash, string? DeliveryAddress);
 }

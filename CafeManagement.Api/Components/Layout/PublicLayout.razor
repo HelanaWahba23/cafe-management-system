@@ -1,23 +1,18 @@
 @inherits LayoutComponentBase
-
+@inject NavigationManager Navigation
+@using Microsoft.AspNetCore.WebUtilities
 <div class="cafe-site">
-    <header class="cafe-header">
-        <div class="container cafe-navbar">
-            <a href="/" class="cafe-brand" aria-label="Café home" data-enhance-nav="false"><span class="cafe-brand-mark" aria-hidden="true">c.</span><span>Café<span class="cafe-brand-caption">a little everyday escape</span></span></a>
-            <nav class="cafe-nav" aria-label="Main navigation">
-                <a href="/" data-enhance-nav="false">Home</a>
-                <a href="/menu/pickup" data-enhance-nav="false">Menu</a>
-                <a href="/#about" data-enhance-nav="false">About us</a>
-            </nav>
-            <a class="btn cafe-order-link" href="/menu/pickup" data-enhance-nav="false">Order for pickup <span aria-hidden="true">↗</span></a>
-        </div>
-    </header>
-    <main id="main-content" class="container cafe-main">@Body</main>
-    <footer class="cafe-footer">
-        <div class="container cafe-footer-inner">
-            <a class="cafe-footer-brand" href="/" data-enhance-nav="false">Café<span>Good coffee. Simple pleasures.</span></a>
-            <p>A little pause in your day.</p>
-            <a href="/account/login" data-enhance-nav="false">Staff access <span aria-hidden="true">↗</span></a>
-        </div>
-    </footer>
+ <header class="cafe-header"><div class="container cafe-navbar">
+  <div class="cafe-account-links"><AuthorizeView><Authorized><a href="/customer/profile" data-enhance-nav="false">My profile</a><a href="/customer/orders" data-enhance-nav="false">My orders</a><a href="/customer/signout" data-enhance-nav="false">Sign out</a></Authorized><NotAuthorized><a href="/customer/login" data-enhance-nav="false">Login</a><a href="/customer/register" data-enhance-nav="false">Sign up</a></NotAuthorized></AuthorizeView></div>
+  <a href="@HomeLink" class="cafe-brand" aria-label="Café home" data-enhance-nav="false"><span class="cafe-brand-mark" aria-hidden="true">c.</span><span>Café<span class="cafe-brand-caption">food worth gathering for</span></span></a>
+  <nav class="cafe-nav" aria-label="Main navigation"><a href="@HomeLink" data-enhance-nav="false">Home</a><a href="@MenuLink" data-enhance-nav="false">Menu</a><a href="@(HomeLink+"#about")" data-enhance-nav="false">About us</a></nav>
+  <a class="btn cafe-order-link" href="@MenuLink" data-enhance-nav="false">@(TableCode is null?"Order now":"Order for your table") <span aria-hidden="true">↗</span></a>
+ </div></header>
+ <main id="main-content" class="container cafe-main">@Body</main>
+ <footer class="cafe-footer"><div class="container cafe-footer-inner"><a class="cafe-footer-brand" href="@HomeLink" data-enhance-nav="false">Café<span>Good food. Great company.</span></a><p>Dine in · Delivery · Pickup</p><a href="/account/login" data-enhance-nav="false">Staff access ↗</a></div></footer>
 </div>
+@code {
+ private Guid? TableCode {get{var uri=new Uri(Navigation.Uri);var parts=uri.AbsolutePath.Split('/',StringSplitOptions.RemoveEmptyEntries);if(parts.Length==3&&parts[0]=="menu"&&parts[1]=="t"&&Guid.TryParse(parts[2],out var code))return code;return QueryHelpers.ParseQuery(uri.Query).TryGetValue("table",out var value)&&Guid.TryParse(value,out code)?code:null;}}
+ private string HomeLink=>TableCode is {} code?$"/?table={code:D}":"/";
+ private string MenuLink=>TableCode is {} code?$"/menu/t/{code:D}":"/menu";
+}

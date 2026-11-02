@@ -483,3 +483,7 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Private local development configuration and diagnostics
+appsettings.Local.json
+.diagnostics/

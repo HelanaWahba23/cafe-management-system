@@ -3,7 +3,8 @@
 <section aria-labelledby="saved-order-heading">
     <h2 id="saved-order-heading" class="h4">Order @Order.Reference</h2>
     <p>@Order.OrderType @if (Order.TableLabel is not null) { <span>— Table: <strong>@Order.TableLabel</strong></span> }</p>
-    <p>Status: <strong>@Order.Status</strong></p>
+    <p>Status: <strong>@OrderProgress.Label(Order.Status, Order.OrderType)</strong></p>
+    @if (Order.OrderType == "Delivery") { <p>Delivery address: <strong>@Order.DeliveryAddress</strong></p><p>Payment: Cash on delivery</p> }
     @if (Order.RejectionReason is not null) { <p role="status">Reason: @Order.RejectionReason</p> }
     <ul class="list-group mb-3">
         @foreach (var item in Order.Items)

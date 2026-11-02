@@ -120,5 +120,5 @@ public sealed class PosOrderService(IDbContextFactory<CafeDbContext> factory, St
     private static PosOrderDetail Project(Order o) => new(o.Id, o.Reference, o.Origin.ToString(), o.Type.ToString(),
         o.TableLabel, o.CustomerName, o.CustomerPhone, o.Status.ToString(), o.RejectionReason, Money(o.Total),
         o.Currency, o.CreatedAtUtc, Convert.ToBase64String(o.RowVersion), o.Lines.OrderBy(l => l.ProductId)
-            .Select(l => new OrderTrackingItem(l.ProductName, l.Quantity, Money(l.UnitPrice), Money(l.LineTotal))).ToArray());
+            .Select(l => new OrderTrackingItem(l.ProductName, l.Quantity, Money(l.UnitPrice), Money(l.LineTotal))).ToArray()) { DeliveryAddress = o.DeliveryAddress };
 }

@@ -16,6 +16,8 @@ public sealed class OrderDraft : IValidatableObject
     public Guid? TablePublicCode { get; set; }
     public string CustomerName { get => customerName; set => customerName = value?.Trim() ?? string.Empty; }
     public string CustomerPhone { get => customerPhone; set => customerPhone = value?.Trim() ?? string.Empty; }
+    public string? DeliveryAddress { get; set; }
+    public bool AddressConfirmed { get; set; }
     public OrderDraftItem?[]? Items { get; set; } = [];
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext) => ValidateCore(false);
@@ -24,12 +26,16 @@ public sealed class OrderDraft : IValidatableObject
 
     private IEnumerable<ValidationResult> ValidateCore(bool optionalContacts)
     {
-        if (OrderType is not (nameof(Domain.OrderType.DineIn) or nameof(Domain.OrderType.Pickup)))
-            yield return new ValidationResult("Choose DineIn or Pickup.", [nameof(OrderType)]);
+        if (OrderType is not (nameof(Domain.OrderType.DineIn) or nameof(Domain.OrderType.Pickup) or nameof(Domain.OrderType.Delivery)))
+            yield return new ValidationResult("Choose dine-in, pickup or delivery.", [nameof(OrderType)]);
         if (OrderType == nameof(Domain.OrderType.DineIn) && (TablePublicCode is null || TablePublicCode == Guid.Empty))
             yield return new ValidationResult("Supply a valid table QR code for dine-in.", [nameof(TablePublicCode)]);
-        if (OrderType == nameof(Domain.OrderType.Pickup) && TablePublicCode is not null)
+        if (OrderType != nameof(Domain.OrderType.DineIn) && TablePublicCode is not null)
             yield return new ValidationResult("Pickup must not include a table code.", [nameof(TablePublicCode)]);
+        if (OrderType == nameof(Domain.OrderType.Delivery) && (string.IsNullOrWhiteSpace(DeliveryAddress) || DeliveryAddress.Trim().Length is < 8 or > 500 || !AddressConfirmed))
+            yield return new ValidationResult("Enter and confirm a delivery address of 8–500 characters.", [nameof(DeliveryAddress)]);
+        if (OrderType != nameof(Domain.OrderType.Delivery) && !string.IsNullOrEmpty(DeliveryAddress))
+            yield return new ValidationResult("Only delivery orders may include an address.", [nameof(DeliveryAddress)]);
         if ((!optionalContacts && string.IsNullOrWhiteSpace(CustomerName)) || CustomerName.Length > 120)
             yield return new ValidationResult("Enter a name of 1–120 characters.", [nameof(CustomerName)]);
         if ((!optionalContacts && string.IsNullOrWhiteSpace(CustomerPhone)) || CustomerPhone.Length > 40)
@@ -140,6 +146,7 @@ public sealed record OrderTracking(Guid Reference, string OrderType, string? Tab
     string Total, string Status, string? RejectionReason, DateTime CreatedAtUtc)
 {
     public string Currency => "EGP";
+    public string? DeliveryAddress { get; init; }
 }
 
 public sealed record OrderPlacementResult(OrderTracking Order)

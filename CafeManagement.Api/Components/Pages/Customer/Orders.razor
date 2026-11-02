@@ -1,0 +1,12 @@
+@page "/customer/orders"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@layout PublicLayout
+@using CafeManagement.Api.Application
+@using CafeManagement.Api.Contracts
+@using CafeManagement.Api.Components.Shared
+@inject CustomerService Customers
+@inject AuthenticationStateProvider Authentication
+<PageTitle>My orders | Café</PageTitle><div class="d-flex justify-content-between flex-wrap gap-3 mb-4"><div><p class="eyebrow">Your Café moments</p><h1>My orders</h1></div><button class="btn btn-outline-primary" @onclick="Load">Refresh orders</button></div>
+@if(orders is null){<p>Loading orders…</p>}else if(orders.Length==0){<div class="card card-body"><h2>No orders yet.</h2><p>Orders placed while signed in will appear here. Keep private links for older guest orders.</p><a href="/menu">Explore the menu</a></div>}else{<div class="row g-3">@foreach(var o in orders){<div class="col-md-6"><article class="card card-body h-100"><p class="eyebrow">@o.OrderType @o.TableLabel</p><h2 class="h4">@OrderProgress.Label(o.Status,o.OrderType)</h2><p>@o.CreatedAtUtc.ToString("dd MMM yyyy HH:mm") UTC</p><p>@o.Items.Sum(i=>i.Quantity) items · EGP @o.Total</p><a class="btn btn-primary" href="@($"/customer/orders/{o.Reference}")">Track order</a></article></div>}</div>}
+@code{OrderTracking[]? orders;protected override Task OnInitializedAsync()=>Load();async Task Load(){orders=await Customers.OrdersAsync((await Authentication.GetAuthenticationStateAsync()).User);}}

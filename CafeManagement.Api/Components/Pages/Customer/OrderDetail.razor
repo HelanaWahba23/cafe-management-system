@@ -1,0 +1,12 @@
+@page "/customer/orders/{Reference:guid}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@layout PublicLayout
+@using CafeManagement.Api.Application
+@using CafeManagement.Api.Contracts
+@using CafeManagement.Api.Components.Shared
+@inject CustomerService Customers
+@inject AuthenticationStateProvider Authentication
+<PageTitle>Track my order | Café</PageTitle><a href="/customer/orders">← My orders</a><h1 class="mt-3">Your order, step by step.</h1><button class="btn btn-outline-primary mb-4" @onclick="Load">Refresh status</button>
+@if(loaded){@if(detail is null){<p role="alert">This order could not be found.</p>}else{<OrderProgress Status="detail.Order.Status" OrderType="detail.Order.OrderType"/><OrderDetails Order="detail.Order"/><p class="alert alert-info">@detail.PaymentState · @(detail.Order.OrderType=="Delivery"?"Cash on delivery":"Pay at the café")</p>}}else{<p>Loading order…</p>}
+@code{[Parameter]public Guid Reference{get;set;}CustomerOrderDetails? detail;bool loaded;protected override Task OnParametersSetAsync()=>Load();async Task Load(){detail=await Customers.OrderAsync((await Authentication.GetAuthenticationStateAsync()).User,Reference);loaded=true;}}

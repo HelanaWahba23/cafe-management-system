@@ -1,4 +1,5 @@
 @page "/menu/pickup"
+@page "/menu"
 @attribute [AllowAnonymous]
 @rendermode InteractiveServer
 @layout PublicLayout
@@ -13,8 +14,8 @@
 @inject IJSRuntime JS
 
 <PageTitle>Pickup menu | Cafe Management</PageTitle>
-<h1>Pickup menu</h1>
-<p>Order for pickup at the cafe. No table QR code is needed.</p>
+<p class="eyebrow">Made for your appetite</p><h1>Our menu</h1>
+<p>Choose delivery or pickup at checkout. Pay cash on delivery or at the café.</p>
 <NavigationLock ConfirmExternalNavigation="@(cart.Items.Count > 0)" OnBeforeInternalNavigation="BeforeNavigationAsync" />
 @if (loading) { <p role="status">Loading menu…</p> }
 else if (failure is not null) { <p class="alert alert-danger" role="alert">@failure.Message</p> }

@@ -61,3 +61,7 @@ The user explicitly approved mobile browser emulation and corresponding Spec Kit
 ## Approved frontend-only refresh —2026-10-30
 
 The user confirmed English Café branding and then explicitly narrowed the request to frontend appearance with simple photos. Add a café homepage, Home/Menu/About navigation and public menu visual polish only. No customer registration/profile/address/account history, new database entities, delivery or online payment is part of this change. Preserve all current guest/staff/order/cash behavior. Superseded broader draft is archived; Feature006 governs this six-task frontend addition.
+
+## Renewed complete restaurant scope —2026-10-30
+
+User now explicitly authorizes customer signup/login/profile/address/history, restaurant UI and categorized menu, delivery(cash-on-delivery)/pickup/table-QR ordering, staff-driven accepted/preparing/ready/delivery/completed tracking. This supersedes prior frontend-only/no-delivery exclusions; no online payment or courier integration. Feature007 is authoritative. Preserve records/accounts/QRs and use additive reviewed migration with backup.

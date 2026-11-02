@@ -1,0 +1,21 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet tool restore
+      - run: dotnet restore CafeManagement.sln
+      - run: dotnet build CafeManagement.sln --configuration Release --no-restore
+      - run: dotnet ef migrations has-pending-model-changes --project CafeManagement.Api --configuration Release --no-build
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+      - run: dotnet publish CafeManagement.Api --configuration Release --no-build --output artifacts/publish

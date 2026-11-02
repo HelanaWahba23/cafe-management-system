@@ -1,52 +1,7 @@
 @using System.Globalization
 @using CafeManagement.Api.Contracts
 @inject NavigationManager Navigation
-
-@if (Categories.Length == 0 || Categories.All(category => category.Products.Length == 0))
-{
-    <p role="status">No available products are currently listed.</p>
-}
-@if (Categories.Length > 0)
-{
-    <nav aria-label="Menu categories" class="mb-4 cafe-category-nav">
-        <ul class="nav gap-2">
-            @foreach (var category in Categories)
-            {
-                <li class="nav-item"><a class="btn btn-outline-primary" href="@($"{Navigation.Uri.Split('#')[0]}#category-{category.Id}")" data-enhance-nav="false">@category.Name</a></li>
-            }
-        </ul>
-    </nav>
-    @foreach (var category in Categories)
-    {
-        <section class="card mb-3 cafe-menu-category" aria-labelledby="@($"category-{category.Id}")" @key="category.Id">
-            <div class="card-body">
-                <h2 id="@($"category-{category.Id}")" class="h4" tabindex="-1">@category.Name</h2>
-                @if (category.Products.Length == 0)
-                {
-                    <p class="mb-0">No available products in this category.</p>
-                }
-                else
-                {
-                    <ul class="list-group list-group-flush">
-                        @foreach (var product in category.Products)
-                        {
-                            <li class="list-group-item px-0 d-flex flex-wrap align-items-center justify-content-between gap-2" @key="product.Id">
-                                <span>@product.Name</span>
-                                <div class="d-flex flex-wrap align-items-center gap-2">
-                                    <span class="fw-semibold">@Currency @product.Price.ToString("F2", CultureInfo.InvariantCulture)</span>
-                                    <button type="button" class="btn btn-outline-primary" aria-label="@($"Add {product.Name} to cart")" @onclick="() => OnAdd.InvokeAsync(product.Id)">Add to cart</button>
-                                </div>
-                            </li>
-                        }
-                    </ul>
-                }
-            </div>
-        </section>
-    }
-}
-
-@code {
-    [Parameter, EditorRequired] public PublicMenuCategory[] Categories { get; set; } = [];
-    [Parameter] public string Currency { get; set; } = "EGP";
-    [Parameter] public EventCallback<int> OnAdd { get; set; }
-}
+@if(Categories.Length==0||Categories.All(c=>c.Products.Length==0)){<p role="status">No available products are currently listed.</p>}
+@if(Categories.Length>0){<div class="restaurant-menu-banner"><img src="/images/restaurant-hero.png" alt="A selection of restaurant dishes"/><div><p class="eyebrow">Something for every appetite</p><h2>Choose your favorites.</h2><p>Delivery · Pickup · At your table</p></div></div><nav aria-label="Menu categories" class="mb-4 cafe-category-nav"><ul class="nav gap-2">@foreach(var c in Categories){<li class="nav-item"><a class="btn btn-outline-primary" href="@($"{Navigation.Uri.Split('#')[0]}#category-{c.Id}")" data-enhance-nav="false">@c.Name</a></li>}</ul></nav>
+@foreach(var c in Categories){<section class="restaurant-category mb-4" aria-labelledby="@($"category-{c.Id}")"><h2 id="@($"category-{c.Id}")" class="h3" tabindex="-1">@c.Name</h2>@if(c.Products.Length==0){<p>No available products in this category.</p>}else{<ul class="restaurant-product-grid">@foreach(var p in c.Products){<li class="restaurant-product card" @key="p.Id"><div class="card-body"><h3 class="h5">@p.Name</h3><div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mt-3"><strong>@Currency @p.Price.ToString("F2",CultureInfo.InvariantCulture)</strong><button type="button" class="btn btn-outline-primary" aria-label="@($"Add {p.Name} to cart")" @onclick="()=>OnAdd.InvokeAsync(p.Id)">Add to cart</button></div></div></li>}</ul>}</section>}}
+@code{[Parameter,EditorRequired]public PublicMenuCategory[] Categories{get;set;}=[];[Parameter]public string Currency{get;set;}="EGP";[Parameter]public EventCallback<int> OnAdd{get;set;}}

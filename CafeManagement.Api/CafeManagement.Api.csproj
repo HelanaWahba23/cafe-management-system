@@ -8,6 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Update="appsettings.Local.json" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+    <EmbeddedResource Include="../scripts/restaurant-menu.sql" LogicalName="CafeManagement.DemoMenu.sql" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.33" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.33">
       <PrivateAssets>all</PrivateAssets>

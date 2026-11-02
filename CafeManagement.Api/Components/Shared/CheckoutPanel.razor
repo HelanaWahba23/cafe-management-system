@@ -5,6 +5,8 @@
 @inject OrderService Orders
 @inject IJSRuntime JS
 @inject IOptions<PublicMenuOptions> PublicOptions
+@inject CustomerService Customers
+@inject AuthenticationStateProvider Authentication
 
 <section class="card mt-3" aria-labelledby="checkout-heading">
     <div class="card-body">
@@ -36,6 +38,10 @@
         else
         {
             <p>@Cart.Type @if (TableLabel is not null) { <span>— Table: <strong>@TableLabel</strong></span> }</p>
+            @if (Cart.Type != CafeManagement.Api.Domain.OrderType.DineIn)
+            {
+                <div class="mb-3"><label for="checkout-mode" class="form-label">How would you like your order?</label><select id="checkout-mode" class="form-select" @bind="Fulfillment"><option value="Pickup">Pickup at the café</option><option value="Delivery">Delivery · Cash on delivery</option></select></div>
+            }
             <form data-order-write @onsubmit="ReviewAsync" @onsubmit:preventDefault>
                 <fieldset disabled="@(busy || HasCartErrors || Cart.Items.Count == 0)">
                     <div class="mb-3">
@@ -46,6 +52,11 @@
                         <label for="checkout-phone" class="form-label">Phone number</label>
                         <input id="checkout-phone" class="form-control" type="tel" required maxlength="40" autocomplete="tel" @bind="Phone" @bind:event="oninput" />
                     </div>
+                    @if (Cart.Type != CafeManagement.Api.Domain.OrderType.DineIn && fulfillment == "Delivery")
+                    {
+                        <div class="mb-3"><label for="checkout-address" class="form-label">Delivery address</label><textarea id="checkout-address" class="form-control" required minlength="8" maxlength="500" autocomplete="street-address" @bind="Address" @bind:event="oninput"></textarea></div>
+                        <div class="form-check mb-3"><input id="confirm-address" class="form-check-input" type="checkbox" @bind="ConfirmAddress"/><label for="confirm-address" class="form-check-label">I confirm this delivery address. I will pay cash on delivery.</label></div>
+                    }
                     <button type="submit" class="btn btn-primary">@(busy ? "Please wait…" : "Review order")</button>
                 </fieldset>
             </form>
@@ -54,6 +65,7 @@
                 <div class="mt-3" aria-live="polite">
                     <h3 class="h5" tabindex="-1" @ref="reviewTarget">Review your order</h3>
                     <p>@review.OrderType @if (review.Table is not null) { <span>— Table: @review.Table.Label</span> }</p>
+                    @if (review.OrderType == "Delivery") { <p>Deliver to: <strong>@reviewedDraft?.DeliveryAddress</strong></p><p>Payment: Cash on delivery. No online payment required.</p> }
                     @if (pricesChanged) { <p class="alert alert-warning">Prices changed. Confirm the updated prices before placing your order.</p> }
                     <ul class="list-group mb-3">
                         @foreach (var item in review.Items)
@@ -85,6 +97,11 @@
     private bool focusReview, focusFeedback;
     private ElementReference reviewTarget, feedbackTarget;
     private string name = "", phone = "", signature = "";
+    private string fulfillment = "Pickup", address = "";
+    private bool addressConfirmed;
+    private bool ConfirmAddress { get => addressConfirmed; set { addressConfirmed = value; Invalidate(); } }
+    private string Fulfillment { get => fulfillment; set { fulfillment = value; Invalidate(); } }
+    private string Address { get => address; set { address = value; addressConfirmed = false; Invalidate(); } }
     private string? privateLink, previousTotal, message;
     private Attempt? attempt;
     private OrderDraft? reviewedDraft;
@@ -111,14 +128,19 @@
             catch (JSException) { /* Reconnect feedback remains authoritative if focus is interrupted. */ }
             return;
         }
-        try { attempt = await JS.InvokeAsync<Attempt?>("cafeOrders.readPending"); uncertain = attempt?.Started == true; ready = true; }
+        try { attempt = await JS.InvokeAsync<Attempt?>("cafeOrders.readPending"); uncertain = attempt?.Started == true;
+            var profile = await Customers.ProfileAsync((await Authentication.GetAuthenticationStateAsync()).User);
+            if (profile is not null) { name = profile.DisplayName; phone = profile.Phone; address = profile.Address ?? ""; }
+            ready = true; }
         catch (JSException) { message = "Private order storage is unavailable. Checkout is blocked; retain any existing private link."; }
         StateHasChanged();
     }
     private void Invalidate() { review = null; reviewedDraft = null; pricesChanged = false; }
     private OrderDraft Draft() => new()
     {
-        OrderType = Cart.Type.ToString(), TablePublicCode = Cart.TablePublicCode, CustomerName = name, CustomerPhone = phone,
+        OrderType = Cart.Type == CafeManagement.Api.Domain.OrderType.DineIn ? "DineIn" : fulfillment, TablePublicCode = Cart.TablePublicCode, CustomerName = name, CustomerPhone = phone,
+        DeliveryAddress = Cart.Type != CafeManagement.Api.Domain.OrderType.DineIn && fulfillment == "Delivery" ? address.Trim() : null,
+        AddressConfirmed = addressConfirmed,
         Items = Cart.Items.Select(item => new OrderDraftItem { ProductId = item.ProductId, Quantity = item.Quantity }).ToArray()
     };
     private async Task SetBusy(bool value) { busy = value; await BusyChanged.InvokeAsync(value); }
@@ -149,7 +171,7 @@
         {
             await JS.InvokeVoidAsync("cafeOrders.markStarted", attempt.Capability);
             attempt.Started = true;
-            var result = await Orders.PlaceAsync(attempt.Capability, new OrderPlacementInput
+            var result = await Customers.PlaceAsync((await Authentication.GetAuthenticationStateAsync()).User, attempt.Capability, new OrderPlacementInput
             {
                 Draft = reviewedDraft,
                 ReviewedPrices = review.Items.Select(i => new ReviewedPrice { ProductId = i.ProductId, UnitPrice = i.UnitPrice }).ToArray()

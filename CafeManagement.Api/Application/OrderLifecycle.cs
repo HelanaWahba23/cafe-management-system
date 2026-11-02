@@ -11,8 +11,13 @@ internal static class OrderLifecycle
         var allowed = (order.Status, next) switch
         {
             (OrderStatus.Submitted, OrderStatus.Preparing) => true,
+            (OrderStatus.Submitted, OrderStatus.Accepted) => true,
+            (OrderStatus.Accepted, OrderStatus.Preparing) => true,
+            (OrderStatus.Accepted, OrderStatus.Rejected) => true,
             (OrderStatus.Preparing, OrderStatus.Ready) => true,
-            (OrderStatus.Ready, OrderStatus.Completed) => true,
+            (OrderStatus.Ready, OrderStatus.Completed) => order.Type != OrderType.Delivery,
+            (OrderStatus.Ready, OrderStatus.OutForDelivery) => order.Type == OrderType.Delivery,
+            (OrderStatus.OutForDelivery, OrderStatus.Completed) => order.Type == OrderType.Delivery,
             (OrderStatus.Submitted, OrderStatus.Rejected) => true,
             _ => false
         };

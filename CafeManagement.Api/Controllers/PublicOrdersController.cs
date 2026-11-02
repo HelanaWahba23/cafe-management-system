@@ -12,7 +12,7 @@ namespace CafeManagement.Api.Controllers;
 [Route("api/orders")]
 [EnableRateLimiting("GuestOrders")]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-public sealed class PublicOrdersController(OrderService orders) : ControllerBase
+public sealed class PublicOrdersController(OrderService orders, CustomerService customers) : ControllerBase
 {
     [HttpPost("review")]
     [Consumes("application/json")]
@@ -31,7 +31,7 @@ public sealed class PublicOrdersController(OrderService orders) : ControllerBase
     [ProducesResponseType(typeof(OrderPlacementResult), StatusCodes.Status200OK)]
     public async Task<IActionResult> Place(OrderPlacementInput input, CancellationToken cancellationToken)
     {
-        var result = await orders.PlaceAsync(Capability(), input, cancellationToken);
+        var result = await customers.PlaceAsync(User, Capability(), input, cancellationToken);
         if (result.Error is not null) return ApiErrors.ToOrderResult(result);
         // The client builds the fragment link from its retained credential; no bearer Location.
         return result.Created ? StatusCode(StatusCodes.Status201Created, result.Value) : Ok(result.Value);

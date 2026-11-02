@@ -1,3 +1,4 @@
+@inject NavigationManager Navigation
 <Router AppAssembly="typeof(App).Assembly">
     <Found Context="routeData">
         <AuthorizeRouteView RouteData="routeData">
@@ -10,8 +11,8 @@
                     }
                     else
                     {
-                        <h1>Staff sign in required</h1>
-                        <a href="/account/login" data-enhance-nav="false">Sign in</a>
+                        <h1>Sign in required</h1>
+                        <a href="@(new Uri(Navigation.Uri).AbsolutePath.StartsWith("/customer") ? "/customer/login" : "/account/login")" data-enhance-nav="false">Sign in</a>
                     }
                 </main>
             </NotAuthorized>
